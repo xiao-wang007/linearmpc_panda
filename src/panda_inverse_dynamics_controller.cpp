@@ -31,7 +31,7 @@ namespace panda_inverse_dynamics {
         // TODO - experiment with gain values
 //        k_p_ = {400.0, 400.0, 400.0, 400.0, 250.0, 150.0, 100.0};  // Proportional gains
 //        k_d_ = {40.0, 40.0, 40.0, 40.0, 30.0, 20.0, 10.0};
-        k_p_ = {400.0, 400.0, 400.0, 400.0, 250.0, 150.0, 100.0};  // Proportional gains
+        k_p_ = {40.0, 40.0, 40.0, 40.0, 25.0, 15.0, 10.0};  // Proportional gains
         k_d_ = {40.0, 40.0, 40.0, 40.0, 30.0, 20.0, 10.0};
 
         return true;
