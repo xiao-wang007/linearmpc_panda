@@ -17,7 +17,7 @@
 
 #include <panda_inverse_dynamics_controller/DesiredState.h>
 
-namespace panda_inverse_dynamics {
+namespace panda_inverse_dynamics_controller {
     #define NUM_JOINTS 7
 
     class InverseDynamicsController : public controller_interface::MultiInterfaceController<
@@ -34,16 +34,18 @@ namespace panda_inverse_dynamics {
     private:
         void desiredStateCallback(const panda_inverse_dynamics_controller::DesiredState::ConstPtr& msg);
 
+        ros::Subscriber state_subscriber_;
+
         std::unique_ptr <franka_hw::FrankaModelHandle> model_handle_;
         std::unique_ptr <franka_hw::FrankaStateHandle> state_handle_;
-        std::unique_ptr <hardware_interface::EffortJointInterface> effort_interface_;
+//        std::unique_ptr <hardware_interface::EffortJointInterface> effort_interface_;
+
+        std::vector<hardware_interface::JointHandle> joint_handles_;
 
         std::vector<double> desired_positions_;
         std::vector<double> desired_velocities_;
         std::vector<double> k_p_;  // Proportional gains
         std::vector<double> k_d_;  // Derivative gai
 
-//        std::vector<double> desired_torques_;
-//        ros::Subscriber torque_subscriber_;
     };
-} // namespace panda_inverse_dynamics
+} // namespace panda_inverse_dynamics_controller

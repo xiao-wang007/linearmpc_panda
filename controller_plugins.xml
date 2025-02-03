@@ -1,0 +1,9 @@
+<library path="lib/libpanda_inverse_dynamics_controller">
+    <class name="panda_inverse_dynamics_controller/InverseDynamicsController"
+           type="panda_inverse_dynamics_controller::InverseDynamicsController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>
+            Inverse Dynamics Controller for Franka Panda
+        </description>
+    </class>
+</library>

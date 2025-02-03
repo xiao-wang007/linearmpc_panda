@@ -4,7 +4,7 @@
 #include <franka_hw/franka_model_interface.h>
 #include <hardware_interface/hardware_interface.h>
 
-namespace panda_inverse_dynamics {
+namespace panda_inverse_dynamics_controller {
     bool InverseDynamicsController::init(hardware_interface::RobotHW *robot_hw, ros::NodeHandle &node_handle) {
         //Get Franka model and state interfaces
         auto *model_interface = robot_hw->get<franka_hw::FrankaModelInterface>();
@@ -19,11 +19,20 @@ namespace panda_inverse_dynamics {
         // Get handles
         model_handle_ = std::make_unique<franka_hw::FrankaModelHandle>(model_interface->getHandle("panda_model"));
         state_handle_ = std::make_unique<franka_hw::FrankaStateHandle>(state_interface->getHandle("panda_robot"));
-        effort_interface_ = std::make_unique<hardware_interface::EffortJointInterface>(*effort_interface);
+//        effort_interface_ = std::make_unique<hardware_interface::EffortJointInterface>(*effort_interface);
 
-//        // Subscribe to desired torques topic
-//        torque_subscriber_ = node_handle.subscribe("/desired_torques", 10,
-//                                                   &InverseDynamicsController::desiredTorqueCallback, this);
+        auto* effort_joint_interface = robot_hw->get<hardware_interface::EffortJointInterface>();
+
+        joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint1"));
+        joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint2"));
+        joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint3"));
+        joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint4"));
+        joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint5"));
+        joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint6"));
+        joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint7"));
+
+        // Create subcriber for user to send messages to the controller
+        state_subscriber_ = node_handle.subscribe("/desired_state", 10, &InverseDynamicsController::desiredStateCallback, this);
 
         desired_positions_.resize(NUM_JOINTS, 0.0);
         desired_velocities_.resize(NUM_JOINTS, 0.0);
@@ -67,6 +76,9 @@ namespace panda_inverse_dynamics {
             qdd_desired(i) = k_p_[i] * (q_desired(i) - q(i)) + k_d_[i] * (dq_desired(i) - dq(i));
         }
 
+//        ROS_INFO("Desired acceleration: %f, %f, %f, %f, %f, %f, %f",
+//                 qdd_desired(0), qdd_desired(1), qdd_desired(2), qdd_desired(3), qdd_desired(4), qdd_desired(5), qdd_desired(6));
+
 //        // Compute desired acceleration from PD control
 //        std::array<double, NUM_JOINTS> desired_accelerations;
 //        for (size_t i = 0; i < NUM_JOINTS; i++) {
@@ -76,16 +88,18 @@ namespace panda_inverse_dynamics {
 
         // Compute Mass, Coriolis and Gravity matrices
         std::array<double, NUM_JOINTS*NUM_JOINTS> mass_matrix = model_handle_->getMass();
-        std::array<double, NUM_JOINTS>            gravity     = model_handle_->getGravity();
         std::array<double, NUM_JOINTS>            coriolis    = model_handle_->getCoriolis();
+        std::array<double, NUM_JOINTS>            gravity     = model_handle_->getGravity();
 
         // Map mass, coriolis an gravity to Eigen matrices
-        Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, NUM_JOINTS>> M(mass_matrix.data());
+        Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, NUM_JOINTS, Eigen::RowMajor>> M(mass_matrix.data());
         Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> C(coriolis.data());
-        Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> G(gravity.data());
 
-        // Compute the desired torques
-        Eigen::Matrix<double, NUM_JOINTS, 1> tau_desired = M * qdd_desired + C + G;
+
+        // Compute the desired torques (tau = Mqdd_desired + Cqg + g)
+        // IMPORTANT NOTE: No need to add gravity here, as gravity is automatically added by the Franka robot
+        // Also franka automatically multiplies coriolis matrix by current velocity vector for us.
+        Eigen::Matrix<double, NUM_JOINTS, 1> tau_desired = (M * qdd_desired) + C;
 
         // Apply torques to the robot
         std::array<double, NUM_JOINTS> tau_command;
@@ -93,13 +107,13 @@ namespace panda_inverse_dynamics {
             tau_command[i] = tau_desired(i);
         }
 
-        effort_interface_->getHandle("panda_joint1").setCommand(tau_command[0]);
-        effort_interface_->getHandle("panda_joint2").setCommand(tau_command[1]);
-        effort_interface_->getHandle("panda_joint3").setCommand(tau_command[2]);
-        effort_interface_->getHandle("panda_joint4").setCommand(tau_command[3]);
-        effort_interface_->getHandle("panda_joint5").setCommand(tau_command[4]);
-        effort_interface_->getHandle("panda_joint6").setCommand(tau_command[5]);
-        effort_interface_->getHandle("panda_joint7").setCommand(tau_command[6]);
+        ROS_INFO("commanded torque: %f, %f, %f, %f, %f, %f, %f",
+                 tau_command[0], tau_command[1], tau_command[2], tau_command[3], tau_command[4], tau_command[5], tau_command[6]);
+
+        for (size_t i = 0; i < NUM_JOINTS; i++) {
+            joint_handles_[i].setCommand(tau_command[i]);
+        }
+        
     }
 
     void InverseDynamicsController::desiredStateCallback(const panda_inverse_dynamics_controller::DesiredState::ConstPtr& msg) {
@@ -115,6 +129,6 @@ namespace panda_inverse_dynamics {
             desired_velocities_[i] = msg->velocities[i];
         }
     }
-} //namespace panda_inverse_dynamics
+} //namespace panda_inverse_dynamics_controller
 
-PLUGINLIB_EXPORT_CLASS(panda_inverse_dynamics::InverseDynamicsController, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(panda_inverse_dynamics_controller::InverseDynamicsController, controller_interface::ControllerBase)
