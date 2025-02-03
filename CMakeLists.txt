@@ -17,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
         pluginlib
         roscpp
         std_msgs
+        std_msgs
+        message_generation
 )
 
 set(Eigen3_FOUND True)
@@ -61,32 +63,15 @@ endif (TARGET Eigen3::Eigen)
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+        FILES
+        DesiredState.msg
+)
 
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
-
-## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
-
-## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+        DEPENDENCIES
+        std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -119,7 +104,16 @@ endif (TARGET Eigen3::Eigen)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
         INCLUDE_DIRS include
-        CATKIN_DEPENDS controller_interface franka_hw franka_msgs franka_control franka_gripper hardware_interface pluginlib roscpp std_msgs
+        CATKIN_DEPENDS  controller_interface
+                        franka_hw
+                        franka_msgs
+                        franka_control
+                        franka_gripper
+                        hardware_interface
+                        pluginlib
+                        roscpp
+                        std_msgs
+                        message_runtime
 )
 
 ###########
@@ -136,7 +130,7 @@ include_directories(
 
 add_library(panda_inverse_dynamics_controller src/panda_inverse_dynamics_controller.cpp)
 target_link_libraries(panda_inverse_dynamics_controller ${catkin_LIBRARIES} Eigen3::Eigen)
-add_dependencies(panda_inverse_dynamics_controller ${catkin_EXPORTED_TARGETS})
+add_dependencies(panda_inverse_dynamics_controller ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
 
 target_include_directories(panda_inverse_dynamics_controller PUBLIC
         include

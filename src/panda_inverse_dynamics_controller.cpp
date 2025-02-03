@@ -28,7 +28,9 @@ namespace panda_inverse_dynamics {
         desired_positions_.resize(NUM_JOINTS, 0.0);
         desired_velocities_.resize(NUM_JOINTS, 0.0);
 
-        // TODO - experient with gain values
+        // TODO - experiment with gain values
+//        k_p_ = {400.0, 400.0, 400.0, 400.0, 250.0, 150.0, 100.0};  // Proportional gains
+//        k_d_ = {40.0, 40.0, 40.0, 40.0, 30.0, 20.0, 10.0};
         k_p_ = {400.0, 400.0, 400.0, 400.0, 250.0, 150.0, 100.0};  // Proportional gains
         k_d_ = {40.0, 40.0, 40.0, 40.0, 30.0, 20.0, 10.0};
 
@@ -101,13 +103,17 @@ namespace panda_inverse_dynamics {
     }
 
     void InverseDynamicsController::desiredStateCallback(const panda_inverse_dynamics_controller::DesiredState::ConstPtr& msg) {
-        if (msg->positions.size() != 7 || msg->velocities.size() != 7) {
+        if (msg->positions.size() != NUM_JOINTS || msg->velocities.size() != NUM_JOINTS) {
             ROS_WARN("Received incorrect state vector size. Expected 7 positions and 7 velocities.");
             return;
         }
 
-        desired_positions_ = msg->positions;
-        desired_velocities_ = msg->velocities;
+        // TODO - Would be good to impose safety limits on commanded velocity
+        // as well as keeping commanded position within joint limits
+        for(size_t i = 0; i < NUM_JOINTS; i++) {
+            desired_positions_[i] = msg->positions[i];
+            desired_velocities_[i] = msg->velocities[i];
+        }
     }
 } //namespace panda_inverse_dynamics
 

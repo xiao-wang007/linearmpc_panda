@@ -15,6 +15,8 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <Eigen/Core>
 
+#include <panda_inverse_dynamics_controller/DesiredState.h>
+
 namespace panda_inverse_dynamics {
     #define NUM_JOINTS 7
 
@@ -30,7 +32,7 @@ namespace panda_inverse_dynamics {
         void starting(const ros::Time &time) override;
 
     private:
-        void desiredTorqueCallback(const std_msgs::Float64MultiArray::ConstPtr &msg);
+        void desiredStateCallback(const panda_inverse_dynamics_controller::DesiredState::ConstPtr& msg);
 
         std::unique_ptr <franka_hw::FrankaModelHandle> model_handle_;
         std::unique_ptr <franka_hw::FrankaStateHandle> state_handle_;
