@@ -19,6 +19,15 @@ find_package(catkin REQUIRED COMPONENTS
         std_msgs
 )
 
+set(Eigen3_FOUND True)
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+if (TARGET Eigen3::Eigen)
+    # Use the imported target
+    message(STATUS "Eigen library found")
+else()
+    message(STATUS "could not find eigen library")
+endif (TARGET Eigen3::Eigen)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -126,7 +135,7 @@ include_directories(
 
 
 add_library(panda_inverse_dynamics_controller src/panda_inverse_dynamics_controller.cpp)
-target_link_libraries(panda_inverse_dynamics_controller ${catkin_LIBRARIES})
+target_link_libraries(panda_inverse_dynamics_controller ${catkin_LIBRARIES} Eigen3::Eigen)
 add_dependencies(panda_inverse_dynamics_controller ${catkin_EXPORTED_TARGETS})
 
 target_include_directories(panda_inverse_dynamics_controller PUBLIC
