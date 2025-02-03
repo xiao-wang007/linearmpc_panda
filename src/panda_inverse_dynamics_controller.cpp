@@ -19,7 +19,6 @@ namespace panda_inverse_dynamics_controller {
         // Get handles
         model_handle_ = std::make_unique<franka_hw::FrankaModelHandle>(model_interface->getHandle("panda_model"));
         state_handle_ = std::make_unique<franka_hw::FrankaStateHandle>(state_interface->getHandle("panda_robot"));
-//        effort_interface_ = std::make_unique<hardware_interface::EffortJointInterface>(*effort_interface);
 
         auto* effort_joint_interface = robot_hw->get<hardware_interface::EffortJointInterface>();
 
@@ -31,17 +30,15 @@ namespace panda_inverse_dynamics_controller {
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint6"));
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint7"));
 
-        // Create subcriber for user to send messages to the controller
+        // Create subscriber for user to send messages to the controller
         state_subscriber_ = node_handle.subscribe("/desired_state", 10, &InverseDynamicsController::desiredStateCallback, this);
 
         desired_positions_.resize(NUM_JOINTS, 0.0);
         desired_velocities_.resize(NUM_JOINTS, 0.0);
 
-        // TODO - experiment with gain values
-//        k_p_ = {400.0, 400.0, 400.0, 400.0, 250.0, 150.0, 100.0};  // Proportional gains
-//        k_d_ = {40.0, 40.0, 40.0, 40.0, 30.0, 20.0, 10.0};
-        k_p_ = {40.0, 40.0, 40.0, 40.0, 25.0, 15.0, 10.0};  // Proportional gains
-        k_d_ = {40.0, 40.0, 40.0, 40.0, 30.0, 20.0, 10.0};
+        // Load gains from parameter server
+        node_handle.getParam("p_gains", k_p_);
+        node_handle.getParam("d_gains", k_d_);
 
         return true;
     }
@@ -76,16 +73,6 @@ namespace panda_inverse_dynamics_controller {
             qdd_desired(i) = k_p_[i] * (q_desired(i) - q(i)) + k_d_[i] * (dq_desired(i) - dq(i));
         }
 
-//        ROS_INFO("Desired acceleration: %f, %f, %f, %f, %f, %f, %f",
-//                 qdd_desired(0), qdd_desired(1), qdd_desired(2), qdd_desired(3), qdd_desired(4), qdd_desired(5), qdd_desired(6));
-
-//        // Compute desired acceleration from PD control
-//        std::array<double, NUM_JOINTS> desired_accelerations;
-//        for (size_t i = 0; i < NUM_JOINTS; i++) {
-//            desired_accelerations[i] = k_p_[i] * (desired_positions_[i] - robot_state.q[i]) +
-//                                       k_d_[i] * (desired_velocities_[i] - robot_state.dq[i]);
-//        }
-
         // Compute Mass, Coriolis and Gravity matrices
         std::array<double, NUM_JOINTS*NUM_JOINTS> mass_matrix = model_handle_->getMass();
         std::array<double, NUM_JOINTS>            coriolis    = model_handle_->getCoriolis();
@@ -96,7 +83,7 @@ namespace panda_inverse_dynamics_controller {
         Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> C(coriolis.data());
 
 
-        // Compute the desired torques (tau = Mqdd_desired + Cqg + g)
+        // Compute the desired torques (tau = M*qdd_desired + C*qg + g)
         // IMPORTANT NOTE: No need to add gravity here, as gravity is automatically added by the Franka robot
         // Also franka automatically multiplies coriolis matrix by current velocity vector for us.
         Eigen::Matrix<double, NUM_JOINTS, 1> tau_desired = (M * qdd_desired) + C;
@@ -113,15 +100,10 @@ namespace panda_inverse_dynamics_controller {
         for (size_t i = 0; i < NUM_JOINTS; i++) {
             joint_handles_[i].setCommand(tau_command[i]);
         }
-        
+
     }
 
     void InverseDynamicsController::desiredStateCallback(const panda_inverse_dynamics_controller::DesiredState::ConstPtr& msg) {
-        if (msg->positions.size() != NUM_JOINTS || msg->velocities.size() != NUM_JOINTS) {
-            ROS_WARN("Received incorrect state vector size. Expected 7 positions and 7 velocities.");
-            return;
-        }
-
         // TODO - Would be good to impose safety limits on commanded velocity
         // as well as keeping commanded position within joint limits
         for(size_t i = 0; i < NUM_JOINTS; i++) {

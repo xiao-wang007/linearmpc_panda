@@ -38,7 +38,6 @@ namespace panda_inverse_dynamics_controller {
 
         std::unique_ptr <franka_hw::FrankaModelHandle> model_handle_;
         std::unique_ptr <franka_hw::FrankaStateHandle> state_handle_;
-//        std::unique_ptr <hardware_interface::EffortJointInterface> effort_interface_;
 
         std::vector<hardware_interface::JointHandle> joint_handles_;
 
