@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>panda_inverse_dynamics_controller</name>
+  <version>0.0.0</version>
+  <description>An inverse dynamics controller package for the Franka_Emika Panda robot</description>
+
+  <maintainer email="scsdr@leeds.ac.uk">david</maintainer>
+
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>controller_interface</build_depend>
+  <build_depend>franka_hw</build_depend>
+  <build_depend>pluginlib</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_export_depend>controller_interface</build_export_depend>
+  <build_export_depend>franka_hw</build_export_depend>
+  <build_export_depend>pluginlib</build_export_depend>
+  <build_export_depend>roscpp</build_export_depend>
+  <exec_depend>controller_interface</exec_depend>
+  <exec_depend>franka_hw</exec_depend>
+  <exec_depend>pluginlib</exec_depend>
+  <exec_depend>roscpp</exec_depend>
+
+  <depend>franka_msgs</depend>
+  <depend>franka_control</depend>
+  <depend>franka_gripper</depend>
+  <depend>hardware_interface</depend>
+  <depend>std_msgs</depend>
+
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <export>
+    <controller_interface plugin="${prefix}/controller_plugins.xml"/>
+  </export>
+
+</package>
