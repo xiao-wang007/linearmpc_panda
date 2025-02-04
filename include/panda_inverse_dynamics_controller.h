@@ -43,6 +43,7 @@ namespace panda_inverse_dynamics_controller {
 
         std::vector<double> desired_positions_;
         std::vector<double> desired_velocities_;
+        std::vector<double> feedforward_acceleration_;
         std::vector<double> k_p_;  // Proportional gains
         std::vector<double> k_d_;  // Derivative gai
 
