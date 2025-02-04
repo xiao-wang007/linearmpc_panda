@@ -9,7 +9,7 @@ term:
 
 ```math
 \begin{align}
-\\ddot{q}_{desired} = \ddot{q}_{feedforward} + \textbf{K}_p(\textbf{q}_{desired} - \textbf{q}_{actual}) + \textbf{K}_d(\textbf{\dot{q}}_{desired} - \textbf{\dot{q}}_{actual})
+\ddot{q}_{desired} = \ddot{q}_{feedforward} + \textbf{K}_p(\textbf{q}_{desired} - \textbf{q}_{actual}) + \textbf{K}_d(\textbf{\dot{q}}_{desired} - \textbf{\dot{q}}_{actual})
 \end{align}
 ```
 
@@ -19,7 +19,7 @@ torques:
 
 ```math
 \begin{align}
-\tau = M(\textbf{q}_{actual}) \ddot{q}_{desired} + C(\textbf{q}_{actual}, \dot{\textbf{q}}_{actual}) \dot{q}_{actual} + G(\textbf{q}),
+\tau = M(\textbf{q}_{actual}) \ddot{\textbf{q}}_{desired} + C(\textbf{q}_{actual}, \dot{\textbf{q}}_{actual}) \dot{\textbf{q}}_{actual} + G(\textbf{q}),
 \end{align}
 ```
 
