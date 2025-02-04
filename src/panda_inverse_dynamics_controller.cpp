@@ -35,6 +35,7 @@ namespace panda_inverse_dynamics_controller {
 
         desired_positions_.resize(NUM_JOINTS, 0.0);
         desired_velocities_.resize(NUM_JOINTS, 0.0);
+        feedforward_acceleration_.resize(NUM_JOINTS, 0.0);
 
         // Load gains from parameter server
         node_handle.getParam("p_gains", k_p_);
@@ -50,6 +51,7 @@ namespace panda_inverse_dynamics_controller {
         for (size_t i = 0; i < NUM_JOINTS; i++) {
             desired_positions_[i] = robot_state.q[i];
             desired_velocities_[i] = 0.0;
+            feedforward_acceleration_[i] = 0.0;
         }
     }
 
@@ -61,16 +63,19 @@ namespace panda_inverse_dynamics_controller {
         Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> dq(robot_state.dq.data());
 
         // Convert desired states to Eigen
-        Eigen::Matrix<double, NUM_JOINTS, 1> q_desired, dq_desired;
+        Eigen::Matrix<double, NUM_JOINTS, 1> q_desired, dq_desired, ddq_feedforward;
         for (size_t i = 0; i < NUM_JOINTS; i++) {
             q_desired(i) = desired_positions_[i];
             dq_desired(i) = desired_velocities_[i];
+            ddq_feedforward(i) = feedforward_acceleration_[i];
         }
 
         // Compute desired acceleration from PD control
         Eigen::Matrix<double, NUM_JOINTS, 1> qdd_desired;
         for (size_t i = 0; i < NUM_JOINTS; i++) {
-            qdd_desired(i) = k_p_[i] * (q_desired(i) - q(i)) + k_d_[i] * (dq_desired(i) - dq(i));
+            qdd_desired(i) = ddq_feedforward(i)
+                                    + k_p_[i] * (q_desired(i) - q(i))
+                                    + k_d_[i] * (dq_desired(i) - dq(i));
         }
 
         // Compute Mass, Coriolis and Gravity matrices
@@ -94,9 +99,6 @@ namespace panda_inverse_dynamics_controller {
             tau_command[i] = tau_desired(i);
         }
 
-        ROS_INFO("commanded torque: %f, %f, %f, %f, %f, %f, %f",
-                 tau_command[0], tau_command[1], tau_command[2], tau_command[3], tau_command[4], tau_command[5], tau_command[6]);
-
         for (size_t i = 0; i < NUM_JOINTS; i++) {
             joint_handles_[i].setCommand(tau_command[i]);
         }
@@ -109,6 +111,7 @@ namespace panda_inverse_dynamics_controller {
         for(size_t i = 0; i < NUM_JOINTS; i++) {
             desired_positions_[i] = msg->positions[i];
             desired_velocities_[i] = msg->velocities[i];
+            feedforward_acceleration_[i] = msg->accelerations[i];
         }
     }
 } //namespace panda_inverse_dynamics_controller
