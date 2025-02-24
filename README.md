@@ -1,4 +1,6 @@
-# panda_inverse_dynamics_controller
+# panda_controllers
+
+## Please note, this repo currently just havs the inverse dynamics controller. I plan to move a torque PD controller into this repo and reorganise the file structure and readme accordingly.
 
 This repository implements an Inverse Dynamics Controller (IDC) for the Franka-Emika Panda
 using franka_ros. The controller computes desired joint torques based on feedforward acceleration 
