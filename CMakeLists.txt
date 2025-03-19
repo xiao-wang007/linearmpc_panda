@@ -128,35 +128,50 @@ include_directories(
 )
 
 
+add_library(panda_controllers
+        src/panda_inverse_dynamics_controller.cpp
+        src/panda_torque_PD_controller.cpp
+        )
 
-add_library(panda_inverse_dynamics_controller src/panda_inverse_dynamics_controller.cpp)
-target_link_libraries(panda_inverse_dynamics_controller ${catkin_LIBRARIES} Eigen3::Eigen)
-add_dependencies(panda_inverse_dynamics_controller ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+target_link_libraries(panda_controllers ${catkin_LIBRARIES} Eigen3::Eigen)
+add_dependencies(panda_controllers ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
 
-target_include_directories(panda_inverse_dynamics_controller PUBLIC
+target_include_directories(panda_controllers PUBLIC
         include
         )
 
-install(TARGETS panda_inverse_dynamics_controller
+install(TARGETS panda_controllers
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         )
 
-add_library(panda_torque_PD_controller src/panda_torque_PD_controller.cpp)
-target_link_libraries(panda_torque_PD_controller ${catkin_LIBRARIES} Eigen3::Eigen)
-add_dependencies(panda_torque_PD_controller ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
-
-target_include_directories(panda_torque_PD_controller PUBLIC
-        include
-        )
-
-install(TARGETS panda_torque_PD_controller
-        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        )
-
-
-install(DIRECTORY include/${PROJECT_NAME}/
-        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-        )
+#add_library(panda_inverse_dynamics_controller src/panda_inverse_dynamics_controller.cpp)
+#target_link_libraries(panda_inverse_dynamics_controller ${catkin_LIBRARIES} Eigen3::Eigen)
+#add_dependencies(panda_inverse_dynamics_controller ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+#
+#target_include_directories(panda_inverse_dynamics_controller PUBLIC
+#        include
+#        )
+#
+#install(TARGETS panda_inverse_dynamics_controller
+#        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#        )
+#
+#add_library(panda_torque_PD_controller src/panda_torque_PD_controller.cpp)
+#target_link_libraries(panda_torque_PD_controller ${catkin_LIBRARIES} Eigen3::Eigen)
+#add_dependencies(panda_torque_PD_controller ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+#
+#target_include_directories(panda_torque_PD_controller PUBLIC
+#        include
+#        )
+#
+#install(TARGETS panda_torque_PD_controller
+#        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#        )
+#
+#
+#install(DIRECTORY include/${PROJECT_NAME}/
+#        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+#        )
 
 install(FILES controller_plugins.xml
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}

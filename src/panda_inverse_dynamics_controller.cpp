@@ -4,7 +4,7 @@
 #include <franka_hw/franka_model_interface.h>
 #include <hardware_interface/hardware_interface.h>
 
-namespace panda_inverse_dynamics_controller {
+namespace panda_controllers {
     bool InverseDynamicsController::init(hardware_interface::RobotHW *robot_hw, ros::NodeHandle &node_handle) {
         //Get Franka model and state interfaces
         auto *model_interface = robot_hw->get<franka_hw::FrankaModelInterface>();
@@ -114,6 +114,6 @@ namespace panda_inverse_dynamics_controller {
             feedforward_acceleration_[i] = msg->accelerations[i];
         }
     }
-} //namespace panda_inverse_dynamics_controller
+} //namespace panda_controllers
 
-PLUGINLIB_EXPORT_CLASS(panda_inverse_dynamics_controller::InverseDynamicsController, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(panda_controllers::InverseDynamicsController, controller_interface::ControllerBase)

@@ -15,7 +15,7 @@
 #include <Eigen/Core>
 #include <panda_torque_PD_controller/DesiredTorqueState.h>
 
-namespace panda_torque_PD_controller {
+namespace panda_controllers {
     #define NUM_JOINTS 7
 
     class TorquePDController : public controller_interface::MultiInterfaceController<
@@ -57,4 +57,4 @@ namespace panda_torque_PD_controller {
         const double kdeltaTauMax_ = 1.0;
 
     };
-} // namespace panda_inverse_dynamics_controller
+} // namespace panda_controllers
