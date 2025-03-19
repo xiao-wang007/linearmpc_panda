@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>panda_inverse_dynamics_controller</name>
+  <name>panda_controllers</name>
   <version>0.0.0</version>
   <description>An inverse dynamics controller package for the Franka_Emika Panda robot</description>
 

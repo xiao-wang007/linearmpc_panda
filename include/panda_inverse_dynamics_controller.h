@@ -17,7 +17,7 @@
 
 #include <panda_inverse_dynamics_controller/DesiredState.h>
 
-namespace panda_inverse_dynamics_controller {
+namespace panda_controllers {
     #define NUM_JOINTS 7
 
     class InverseDynamicsController : public controller_interface::MultiInterfaceController<
@@ -48,4 +48,4 @@ namespace panda_inverse_dynamics_controller {
         std::vector<double> k_d_;  // Derivative gai
 
     };
-} // namespace panda_inverse_dynamics_controller
+} // namespace panda_controllers

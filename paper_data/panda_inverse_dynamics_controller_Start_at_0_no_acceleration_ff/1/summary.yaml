@@ -1,0 +1,25 @@
+Controller: panda_inverse_dynamics_controller
+mpc_start_state_method: Start_at_0
+Kp:
+  - 300
+  - 300
+  - 300
+  - 300
+  - 150
+  - 100
+  - 150
+Kv:
+  - 40
+  - 40
+  - 40
+  - 40
+  - 20
+  - 20
+  - 10
+Low pass filter, alpha: 0.2
+Low pass filter: false
+Send acceleration feedforward: false
+Task complete: true
+Task time: 1846
+Robot stopped: false
+Total cost: 262.2276758951342

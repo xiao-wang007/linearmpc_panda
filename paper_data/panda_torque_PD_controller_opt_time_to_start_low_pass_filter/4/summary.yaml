@@ -1,0 +1,25 @@
+Controller: panda_torque_PD_controller
+mpc_start_state_method: opt_time_to_start
+Kp:
+  - 50
+  - 50
+  - 50
+  - 50
+  - 50
+  - 30
+  - 30
+Kv:
+  - 75
+  - 75
+  - 75
+  - 75
+  - 20
+  - 12
+  - 12
+Torque rate limiter: false
+Low pass filter: true
+Send torque feedforward: true
+Task complete: true
+Task time: 310
+Robot stopped: false
+Total cost: 40.58776939983609
