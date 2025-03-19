@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(panda_inverse_dynamics_controller)
+project(panda_controllers)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -66,6 +66,7 @@ endif (TARGET Eigen3::Eigen)
 add_message_files(
         FILES
         DesiredState.msg
+        DesiredTorqueState.msg
 )
 
 generate_messages(
@@ -139,6 +140,20 @@ target_include_directories(panda_inverse_dynamics_controller PUBLIC
 install(TARGETS panda_inverse_dynamics_controller
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         )
+
+add_library(panda_torque_PD_controller src/panda_torque_PD_controller.cpp)
+target_link_libraries(panda_torque_PD_controller ${catkin_LIBRARIES} Eigen3::Eigen)
+add_dependencies(panda_torque_PD_controller ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+
+target_include_directories(panda_torque_PD_controller PUBLIC
+        include
+        )
+
+install(TARGETS panda_torque_PD_controller
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        )
+
+
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
         )
