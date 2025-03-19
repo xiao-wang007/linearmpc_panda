@@ -131,7 +131,7 @@ include_directories(
 add_library(panda_controllers
         src/panda_inverse_dynamics_controller.cpp
         src/panda_torque_PD_controller.cpp
-        )
+        src/panda_QP_controller.cpp include/panda_QP_controller.h)
 
 target_link_libraries(panda_controllers ${catkin_LIBRARIES} Eigen3::Eigen)
 add_dependencies(panda_controllers ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)

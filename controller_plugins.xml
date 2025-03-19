@@ -13,4 +13,11 @@
             Torque PD controller for Franka Panda
         </description>
     </class>
+    <class name="panda_controllers/QPController"
+           type="panda_controllers::QPController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>
+            Torque PD controller for Franka Panda
+        </description>
+    </class>
 </library>
