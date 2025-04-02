@@ -105,7 +105,7 @@ namespace panda_controllers {
 
     }
 
-    void InverseDynamicsController::desiredStateCallback(const panda_inverse_dynamics_controller::DesiredState::ConstPtr& msg) {
+    void InverseDynamicsController::desiredStateCallback(const panda_controllers::DesiredState::ConstPtr& msg) {
         // TODO - Would be good to impose safety limits on commanded velocity
         // as well as keeping commanded position within joint limits
         for(size_t i = 0; i < NUM_JOINTS; i++) {

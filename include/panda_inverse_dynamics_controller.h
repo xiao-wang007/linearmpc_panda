@@ -15,7 +15,7 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <Eigen/Core>
 
-#include <panda_inverse_dynamics_controller/DesiredState.h>
+#include <panda_controllers/DesiredState.h>
 
 namespace panda_controllers {
     #define NUM_JOINTS 7
@@ -32,7 +32,7 @@ namespace panda_controllers {
         void starting(const ros::Time &time) override;
 
     private:
-        void desiredStateCallback(const panda_inverse_dynamics_controller::DesiredState::ConstPtr& msg);
+        void desiredStateCallback(const panda_controllers::DesiredState::ConstPtr& msg);
 
         ros::Subscriber state_subscriber_;
 

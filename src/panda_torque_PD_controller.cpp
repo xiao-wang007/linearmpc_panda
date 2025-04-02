@@ -123,7 +123,7 @@ namespace panda_controllers {
         }
     }
 
-    void TorquePDController::desiredTorqueStateCallback(const panda_torque_PD_controller::DesiredTorqueState::ConstPtr& msg) {
+    void TorquePDController::desiredTorqueStateCallback(const panda_controllers::DesiredTorqueState::ConstPtr& msg) {
         // TODO - Would be good to impose safety limits on commanded velocity
         // as well as keeping commanded position within joint limits
         for(size_t i = 0; i < NUM_JOINTS; i++) {

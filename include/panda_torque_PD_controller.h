@@ -13,7 +13,7 @@
 #include <ros/time.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <Eigen/Core>
-#include <panda_torque_PD_controller/DesiredTorqueState.h>
+#include <panda_controllers/DesiredTorqueState.h>
 
 namespace panda_controllers {
     #define NUM_JOINTS 7
@@ -30,7 +30,7 @@ namespace panda_controllers {
         void starting(const ros::Time &time) override;
 
     private:
-        void desiredTorqueStateCallback(const panda_torque_PD_controller::DesiredTorqueState::ConstPtr& msg);
+        void desiredTorqueStateCallback(const panda_controllers::DesiredTorqueState::ConstPtr& msg);
 
         void saturateTorqueRate( std::array<double, 7>& tau_d_command,
                                  const std::array<double, 7>& tau_J_d);
