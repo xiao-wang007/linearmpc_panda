@@ -8,17 +8,16 @@ project(panda_controllers)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-        controller_interface
-        franka_hw
-        franka_msgs
-        franka_control
-        franka_gripper
-        hardware_interface
-        pluginlib
-        roscpp
-        std_msgs
-        std_msgs
-        message_generation
+    controller_interface
+    franka_hw
+    franka_msgs
+    franka_control
+    franka_gripper
+    hardware_interface
+    pluginlib
+    roscpp
+    std_msgs
+    message_generation
 )
 
 find_package(drake REQUIRD)
@@ -69,6 +68,7 @@ add_message_files(
         FILES
         DesiredState.msg
         DesiredTorqueState.msg
+        SetJointPositions.srv
 )
 
 generate_messages(

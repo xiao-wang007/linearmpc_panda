@@ -25,6 +25,8 @@ namespace panda_controllers {
 
         void starting(const ros::Time &time) override;
 
+        void go_to_init_pose(const Eigen::VectorXd& init_joint_pos);
+
     private:
 //        void desiredStateCallback(const panda_inverse_dynamics_controller::DesiredState::ConstPtr& msg);
 

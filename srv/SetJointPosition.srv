@@ -1,0 +1,5 @@
+# SetJointPosition.srv
+float64[7] 
+---
+bool success
+string message
