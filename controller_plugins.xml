@@ -1,11 +1,13 @@
-<library path="lib/liblinearmpc_controller">
+<!-- the library path lib/liblinearmpc_panda has to match the one in add_library() in CMakeLists.txt -->
+<library path="lib/liblinearmpc_panda">
     <!-- <class name="linearmpc_panda/InverseDynamicsController"
            type="linearmpc_panda::InverseDynamicsController"
            base_class_type="controller_interface::ControllerBase">
         <description>
             Inverse Dynamics Controller for Franka Panda
         </description>
-    </class>
+    </class>:
+
     <class name="linearmpc_panda/TorquePDController"
            type="linearmpc_panda::TorquePDController"
            base_class_type="controller_interface::ControllerBase">

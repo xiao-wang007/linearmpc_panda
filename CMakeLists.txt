@@ -128,13 +128,12 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-
 add_library(linearmpc_panda
         src/panda_inverse_dynamics_controller.cpp
         src/panda_torque_PD_controller.cpp
         src/panda_QP_controller.cpp include/panda_QP_controller.h)
 
-target_link_libraries(linearmpc_panda ${catkin_LIBRARIES} Eigen3::Eigen)
+target_link_libraries(linearmpc_panda ${catkin_LIBRARIES} Eigen3::Eigen drake::drake)
 add_dependencies(linearmpc_panda ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
 
 target_include_directories(linearmpc_panda PUBLIC
