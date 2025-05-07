@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(panda_controllers)
+project(linearmpc_panda)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -130,19 +130,19 @@ include_directories(
 )
 
 
-add_library(panda_controllers
+add_library(linearmpc_panda
         src/panda_inverse_dynamics_controller.cpp
         src/panda_torque_PD_controller.cpp
         src/panda_QP_controller.cpp include/panda_QP_controller.h)
 
-target_link_libraries(panda_controllers ${catkin_LIBRARIES} Eigen3::Eigen)
-add_dependencies(panda_controllers ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+target_link_libraries(linearmpc_panda ${catkin_LIBRARIES} Eigen3::Eigen)
+add_dependencies(linearmpc_panda ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
 
-target_include_directories(panda_controllers PUBLIC
+target_include_directories(linearmpc_panda PUBLIC
         include
         )
 
-install(TARGETS panda_controllers
+install(TARGETS linearmpc_panda
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         )
 
