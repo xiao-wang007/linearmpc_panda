@@ -20,7 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
     message_generation
 )
 
-find_package(drake REQUIRD)
+find_package(drake REQUIRED)
 
 set(Eigen3_FOUND True)
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
@@ -68,7 +68,6 @@ add_message_files(
         FILES
         DesiredState.msg
         DesiredTorqueState.msg
-        SetJointPositions.srv
 )
 
 generate_messages(

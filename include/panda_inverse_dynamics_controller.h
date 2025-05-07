@@ -15,9 +15,9 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <Eigen/Core>
 
-#include <panda_controllers/DesiredState.h>
+#include <linearmpc_panda/DesiredState.h>
 
-namespace panda_controllers {
+namespace linearmpc_panda{
     #define NUM_JOINTS 7
 
     class InverseDynamicsController : public controller_interface::MultiInterfaceController<
@@ -32,7 +32,7 @@ namespace panda_controllers {
         void starting(const ros::Time &time) override;
 
     private:
-        void desiredStateCallback(const panda_controllers::DesiredState::ConstPtr& msg);
+        void desiredStateCallback(const linearmpc_panda::DesiredState::ConstPtr& msg);
 
         ros::Subscriber state_subscriber_;
 
@@ -48,4 +48,4 @@ namespace panda_controllers {
         std::vector<double> k_d_;  // Derivative gai
 
     };
-} // namespace panda_controllers
+} // namespace linearmpc_panda

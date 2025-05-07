@@ -11,7 +11,7 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <Eigen/Core>
 
-namespace panda_controllers {
+namespace linearmpc_panda {
 #define NUM_JOINTS 7
 
     class QPController : public controller_interface::MultiInterfaceController<
@@ -39,4 +39,4 @@ namespace panda_controllers {
 
 
     };
-} // namespace panda_controllers
+} // namespace linearmpc_panda

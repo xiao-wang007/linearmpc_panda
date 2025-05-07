@@ -1,5 +1,6 @@
 linearmpc_controller:
-  type: linearmpc_panda/linearmpc_tracking_controller
+  type: "linearmpc_panda/QP_controller"
+  arm_id: "panda"
   joint_names:
     - panda_joint1
     - panda_joint2

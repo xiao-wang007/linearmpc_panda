@@ -13,9 +13,9 @@
 #include <ros/time.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <Eigen/Core>
-#include <panda_controllers/DesiredTorqueState.h>
+#include <linearmpc_panda/DesiredTorqueState.h>
 
-namespace panda_controllers {
+namespace linearmpc_panda{
     #define NUM_JOINTS 7
 
     class TorquePDController : public controller_interface::MultiInterfaceController<
@@ -30,7 +30,7 @@ namespace panda_controllers {
         void starting(const ros::Time &time) override;
 
     private:
-        void desiredTorqueStateCallback(const panda_controllers::DesiredTorqueState::ConstPtr& msg);
+        void desiredTorqueStateCallback(const linearmpc_panda::DesiredTorqueState::ConstPtr& msg);
 
         void saturateTorqueRate( std::array<double, 7>& tau_d_command,
                                  const std::array<double, 7>& tau_J_d);
@@ -57,4 +57,4 @@ namespace panda_controllers {
         const double kdeltaTauMax_ = 1.0;
 
     };
-} // namespace panda_controllers
+} // namespace linearmpc_panda

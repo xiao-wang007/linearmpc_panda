@@ -1,0 +1,8 @@
+<launch>
+  <!-- Load parameters -->
+  <rosparam file="$(find linearmpc_panda)/config/linearmpc_controller.yaml" command="load"/>
+
+  <!-- Load and start controller -->
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+        output="screen" args="linearmpc_tracking_controller"/>
+</launch>

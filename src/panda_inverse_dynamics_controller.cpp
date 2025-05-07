@@ -4,7 +4,7 @@
 #include <franka_hw/franka_model_interface.h>
 #include <hardware_interface/hardware_interface.h>
 
-namespace panda_controllers {
+namespace linearmpc_panda {
     bool InverseDynamicsController::init(hardware_interface::RobotHW *robot_hw, ros::NodeHandle &node_handle) {
         //Get Franka model and state interfaces
         auto *model_interface = robot_hw->get<franka_hw::FrankaModelInterface>();
@@ -105,7 +105,7 @@ namespace panda_controllers {
 
     }
 
-    void InverseDynamicsController::desiredStateCallback(const panda_controllers::DesiredState::ConstPtr& msg) {
+    void InverseDynamicsController::desiredStateCallback(const linearmpc_panda::DesiredState::ConstPtr& msg) {
         // TODO - Would be good to impose safety limits on commanded velocity
         // as well as keeping commanded position within joint limits
         for(size_t i = 0; i < NUM_JOINTS; i++) {
@@ -114,6 +114,6 @@ namespace panda_controllers {
             feedforward_acceleration_[i] = msg->accelerations[i];
         }
     }
-} //namespace panda_controllers
+} //namespace linearmpc_panda
 
-PLUGINLIB_EXPORT_CLASS(panda_controllers::InverseDynamicsController, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(linearmpc_panda::InverseDynamicsController, controller_interface::ControllerBase)

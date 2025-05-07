@@ -1,4 +1,4 @@
-<library path="lib/liblinearmpc_panda">
+<library path="lib/liblinearmpc_controller">
     <!-- <class name="linearmpc_panda/InverseDynamicsController"
            type="linearmpc_panda::InverseDynamicsController"
            base_class_type="controller_interface::ControllerBase">
@@ -11,10 +11,10 @@
            base_class_type="controller_interface::ControllerBase">
         <description>
             Torque PD controller for Franka Panda
-        </description> -->
-    </class>
-    <class name="linearmpc_panda/linearmpc_tracking_controller"
-           type="linearmpc_panda::linearmpc_tracking_controller"
+        </description> 
+    </class>-->
+    <class name="linearmpc_panda/QP_controller"
+           type="linearmpc_panda::QP_controller"
            base_class_type="controller_interface::ControllerBase">
         <description>
             linear MPC tracking controller for panda that presumes a precomuted

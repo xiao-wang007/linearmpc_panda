@@ -4,7 +4,7 @@
 #include <franka_hw/franka_model_interface.h>
 #include <hardware_interface/hardware_interface.h>
 
-namespace panda_controllers {
+namespace linearmpc_panda {
     bool QPController::init(hardware_interface::RobotHW *robot_hw, ros::NodeHandle &node_handle) {
         //Get Franka model and state interfaces
         auto *model_interface = robot_hw->get<franka_hw::FrankaModelInterface>();
@@ -59,7 +59,7 @@ namespace panda_controllers {
 //            feedforward_acceleration_[i] = msg->accelerations[i];
 //        }
 //    }
-} //namespace panda_controllers
+} //namespace linearmpc_panda
 
-PLUGINLIB_EXPORT_CLASS(panda_controllers::QPController, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(linearmpc_panda::QPController, controller_interface::ControllerBase)
 
