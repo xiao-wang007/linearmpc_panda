@@ -21,6 +21,11 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(drake REQUIRED)
+if(drake_FOUND)
+    message(STATUS "drake found")
+else()
+    message(STATUS "drake not found")
+endif()
 
 set(Eigen3_FOUND True)
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)

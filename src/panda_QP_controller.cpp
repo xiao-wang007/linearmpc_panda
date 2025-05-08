@@ -36,7 +36,17 @@ namespace linearmpc_panda {
         return true;
     }
 
-    void QPController::starting(const ros::Time & /*time*/) {
+    void QPController::starting(const ros::Time & /*time*/) 
+    {
+        // init the plant   
+
+        // read x_ref and u_ref
+
+        // set the condition here to check if current robot state is close to x0_ref
+
+        // index the first horizon
+
+        // init prog
 
     }
 
@@ -59,6 +69,31 @@ namespace linearmpc_panda {
 //            feedforward_acceleration_[i] = msg->accelerations[i];
 //        }
 //    }
+
+
+    void QPController::init_plant() 
+    {
+        // Initialize the plant here
+		plant_ptr_ = std::make_unique<MultibodyPlant<double>>(h_env_);
+		Parser parser(plant_ptr_.get());
+		parser.AddModels(panda_file_);
+		const auto& arm_base_frame = plant_ptr_->GetFrameByName("panda_link0");
+
+        auto X_W_base = RigidTransform<double>(RollPitchYaw<double>(Vector3<double>(0., 0., -90.) * PI / 180.),
+                                      Vector3<double>(0., -0.2, 0.));
+		plant_ptr_->WeldFrames(plant_ptr_->world_frame(), arm_base_frame, X_W_base);
+
+		plant_ptr_->Finalize();
+		plantAD_ptr_ = System<double>::ToAutoDiffXd( *(this->plant_ptr_) );
+		contextAD_ptr_ = plantAD_ptr_->CreateDefaultContext();
+		context_ptr_ = plant_ptr_->CreateDefaultContext();
+    }
+
+    void QPController::init_prog() 
+    {
+        // Initialize the prog here
+    }
+
 } //namespace linearmpc_panda
 
 PLUGINLIB_EXPORT_CLASS(linearmpc_panda::QPController, controller_interface::ControllerBase)
