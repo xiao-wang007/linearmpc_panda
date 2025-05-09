@@ -84,7 +84,7 @@ namespace linearmpc_panda {
 		Eigen::MatrixXd R_;
 		Eigen::MatrixXd P_;
 		Eigen::VectorXd udot_up_ {Eigen::VectorXd::Constant(nu_, 1000.0)}; 
-		Eigen::VectorXd udot_low_ {-ndot_up_}; 
+		Eigen::VectorXd udot_low_ {-udot_up_}; 
 
 		AutoDiffVecXd f_grad_;
 		PiecewisePolynomial<double> x_ref_spline_;

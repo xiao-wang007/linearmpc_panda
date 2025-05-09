@@ -7,8 +7,13 @@
                 "/usr/include/eigen3",
                 "/opt/ros/noetic/include",
                 "/home/rosdrake/catkin_ws/devel/include",
-                "opt/drake/include"
+                "/opt/drake/include"
             ],
+            /*this assumes inside $(workspaceFolder) which is set in 
+              .devcontainer/devcontainer.json 
+              In my current setting, the $(workspaceFolder) is 
+              /home/rosdrake */
+            "compileCommands": "compile_commands.json", 
             "defines": [],
             "compilerPath": "/usr/bin/g++",
             "cStandard": "c17",
