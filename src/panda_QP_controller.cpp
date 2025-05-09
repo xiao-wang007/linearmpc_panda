@@ -41,13 +41,15 @@ namespace linearmpc_panda {
         // init the plant   
         this->init_plant();
 
+        // init prog
+        this->init_prog();
+
         // read x_ref and u_ref
 
         // set the condition here to check if current robot state is close to x0_ref
 
         // index the first horizon
 
-        // init prog
 
     }
 
@@ -93,6 +95,57 @@ namespace linearmpc_panda {
     void QPController::init_prog() 
     {
         // Initialize the prog here
+		nDecVar_ = Nh_ * (nx_ + nu_);
+		dx_vars_ = prog_.NewContinuousVariables(Nh_, nx_, "joint ds");
+		du_vars_ = prog_.NewContinuousVariables(Nh_, nu_, "joint du");
+
+		/* flatten the decision variables */
+		MatrixDecisionVariable<Eigen::Dynamic, Eigen::Dynamic> temp(du_vars_.rows(), 
+																	du_vars_.cols() + dx_vars_.cols());
+		temp << du_vars_, dx_vars_;
+
+		//this create a view, not making a copy
+		auto decVar_flat(Eigen::Map<const VectorDecisionVariable<Eigen::Dynamic>>(temp.data(), temp.size()));
+
+		// add cost integral cost
+		for (int i = 0; i < Nh_ - 1; ++i)
+		{
+			auto dx_i = dx_vars_.row(i);
+			auto du_i = du_vars_.row(i);
+
+			// fogot that var goes out of scope created in for loop
+			auto bx = Eigen::VectorXd::Zero(nx_);
+			auto cost = prog_.AddQuadraticCost(Q_, bx, dx_i);
+			cost.evaluator()->set_description("Integral cost on s. ");
+			auto bu = Eigen::VectorXd::Zero(nu_);
+			cost = prog_.AddQuadraticCost(R_, bu, du_i);
+			cost.evaluator()->set_description("Integral cost on u. ");
+		}
+
+		// add terminal cost
+		auto dx_f = dx_vars_.row(Nh_ - 1);
+		auto b = Eigen::VectorXd::Zero(nx_);
+		/* this will error: prog_.AddCost(0.5 * (dx_f.transpose() * P_ * dx_f)); */
+		auto cost = prog_.AddQuadraticCost(P_, b, dx_f); 
+
+		// set up the constraints
+		C_cols_ = Nh_ * (nx_ + nu_);
+
+		if (u_entries_.size() == 0)
+		{
+			C_rows_ = Nh_ * nx_;
+		} else {
+			C_rows_ = Nh_*nx_ + Nh_*nu_;
+		}
+
+		C_ = Eigen::MatrixXd::Zero(C_rows_, C_cols_);
+		C_.block(0, nu_, nx_, nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
+		std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% here checking" << std::endl;
+
+		lb_ = Eigen::VectorXd::Zero(C_rows_);
+		ub_ = Eigen::VectorXd::Zero(C_rows_);
+
+		cst_ = prog_.AddLinearConstraint(C_, lb_, ub_, decVar_flat);
         
     }
 

@@ -1,0 +1,64 @@
+#pragma once 
+#include <iostream>
+#include <Eigen/Dense>
+#include <vector>
+#include <string>
+#include <map>
+#include <unordered_map>
+#include <stdexcept>
+#include <drake/common/trajectories/piecewise_polynomial.h>
+#include "cnpy.h"
+
+
+namespace MyUtils {
+	//
+	using drake::trajectories::PiecewisePolynomial;
+	using drake::AutoDiffXd;
+
+	//
+	using ProcessedTrajMapToMat = std::unordered_map<std::string, Eigen::MatrixXd>;
+
+	//
+	struct ProcessedSolution {
+		const ProcessedTrajMapToMat trajs;
+		const PiecewisePolynomial<double> x_ref_spline;
+		const PiecewisePolynomial<double> u_ref_spline; 
+
+		//const data members must be initialized via a constructor initializer list
+		ProcessedSolution(const ProcessedTrajMapToMat& in1,
+						  const PiecewisePolynomial<double>& in2,
+						  const PiecewisePolynomial<double>& in3)
+			: trajs(in1), x_ref_spline(in2), u_ref_spline(in3) {}
+	};
+
+	//
+	ProcessedTrajMapToMat PreprocessSolutionToMat(const Eigen::VectorXd& sol,
+							   					  const std::vector<std::string>& var_names, 
+							   					  const std::vector<int> dims,
+							   					  const std::vector<int> nTimes);
+
+    //
+	template <typename T>
+	std::vector<T> SlicingVector(const std::vector<T>& v,
+			  					 int start,
+			  					 int end);
+
+	//
+	template <typename Derived>
+	Eigen::Matrix<typename Derived::Scalar, Eigen::Dynamic, 1> CumSum(const Eigen::MatrixBase<Derived>& vec);
+
+	//
+	template <typename T>
+	void PrintStdVector(const std::vector<T>& vec);
+
+	//
+	const ProcessedSolution ProcessSolTraj(const std::string& file_path,
+										   const std::vector<std::string>& var_names,
+										   const std::vector<int> dims,
+										   const std::vector<int> times);
+
+	//
+	void VisualizeMatSparsity(const Eigen::MatrixXd& mat);
+
+}
+
