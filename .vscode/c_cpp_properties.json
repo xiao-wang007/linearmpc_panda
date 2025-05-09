@@ -7,7 +7,7 @@
                 "/usr/include/eigen3",
                 "/opt/ros/noetic/include",
                 "/home/rosdrake/catkin_ws/devel/include",
-                "/path/to/drake/include"
+                "opt/drake/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/g++",
