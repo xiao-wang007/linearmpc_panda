@@ -1,5 +1,4 @@
 #include "panda_QP_controller.h"
-#include "my_utils.h"
 #include <pluginlib/class_list_macros.h>
 #include <franka/robot_state.h>
 #include <franka_hw/franka_model_interface.h>
@@ -46,7 +45,7 @@ namespace linearmpc_panda {
         this->init_prog();
 
         // load x_ref and u_ref
-		const auto data_proc = MyUtils::ProcessSolTraj(file_path_, var_names_, dims_, times_);
+		data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
 
         // set the condition here to check if current robot state is close to x0_ref
 

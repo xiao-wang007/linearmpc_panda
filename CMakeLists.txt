@@ -143,8 +143,9 @@ add_dependencies(linearmpc_panda ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gene
 
 target_include_directories(linearmpc_panda PUBLIC
         include
+        external/cnpy
         )
-
+# add_subdirectory(external/cnpy)
 install(TARGETS linearmpc_panda
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         )

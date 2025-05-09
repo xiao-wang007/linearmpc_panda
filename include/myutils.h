@@ -20,14 +20,17 @@ namespace MyUtils {
 
 	//
 	struct ProcessedSolution {
-		const ProcessedTrajMapToMat trajs;
-		const PiecewisePolynomial<double> x_ref_spline;
-		const PiecewisePolynomial<double> u_ref_spline; 
+		ProcessedTrajMapToMat trajs;
+		PiecewisePolynomial<double> x_ref_spline;
+		PiecewisePolynomial<double> u_ref_spline; 
+
+		//default constructor
+		ProcessedSolution() = default;
 
 		//const data members must be initialized via a constructor initializer list
-		ProcessedSolution(const ProcessedTrajMapToMat& in1,
-						  const PiecewisePolynomial<double>& in2,
-						  const PiecewisePolynomial<double>& in3)
+		ProcessedSolution(ProcessedTrajMapToMat& in1,
+						  PiecewisePolynomial<double>& in2,
+						  PiecewisePolynomial<double>& in3)
 			: trajs(in1), x_ref_spline(in2), u_ref_spline(in3) {}
 	};
 

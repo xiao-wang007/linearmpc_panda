@@ -1,5 +1,7 @@
 #pragma once
 
+#include "myutils.h"
+#include <optional>
 #include <controller_interface/multi_interface_controller.h>
 #include <hardware_interface/robot_hw.h>
 #include <hardware_interface/joint_command_interface.h>
@@ -90,9 +92,9 @@ namespace linearmpc_panda {
         int N_ = 60;
         std::vector<std::string> var_names_ = {"q_panda", "v_panda", "us", "fn", "ft", "v1_post", "w1_post", "h"};
         std::vector<int> dims_ = {7, 7, 7, 1, 2, 2, 1, 1};
-        std::vector<int> times_ = {N, N, N, 1, 1, 1, 1, N-1};
+        std::vector<int> times_ = {N_, N_, N_, 1, 1, 1, 1, N_-1};
         std::string ref_traj_path_ = "/home/rosdrake/src/src/mpc/traj_refs/1.npy";
-        
+        std::optional<MyUtils::ProcessedSolution> data_proc_; // Use std::optional
 
 		AutoDiffVecXd f_grad_;
 		PiecewisePolynomial<double> x_ref_spline_;
