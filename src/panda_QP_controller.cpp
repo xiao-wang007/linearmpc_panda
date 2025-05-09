@@ -39,6 +39,7 @@ namespace linearmpc_panda {
     void QPController::starting(const ros::Time & /*time*/) 
     {
         // init the plant   
+        this->init_plant();
 
         // read x_ref and u_ref
 
@@ -92,6 +93,7 @@ namespace linearmpc_panda {
     void QPController::init_prog() 
     {
         // Initialize the prog here
+        
     }
 
 } //namespace linearmpc_panda
