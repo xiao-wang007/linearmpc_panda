@@ -86,10 +86,19 @@ namespace linearmpc_panda {
 		Eigen::VectorXd udot_up_ {Eigen::VectorXd::Constant(nu_, 1000.0)}; 
 		Eigen::VectorXd udot_low_ {-udot_up_}; 
 
+        //member variables related to the reference traj
+        int N_ = 60;
+        std::vector<std::string> var_names_ = {"q_panda", "v_panda", "us", "fn", "ft", "v1_post", "w1_post", "h"};
+        std::vector<int> dims_ = {7, 7, 7, 1, 2, 2, 1, 1};
+        std::vector<int> times_ = {N, N, N, 1, 1, 1, 1, N-1};
+        std::string ref_traj_path_ = "/home/rosdrake/src/src/mpc/traj_refs/1.npy";
+        
+
 		AutoDiffVecXd f_grad_;
 		PiecewisePolynomial<double> x_ref_spline_;
 		PiecewisePolynomial<double> u_ref_spline_;
 
+        //member variables related to the plant
 		std::vector<int> u_entries_;
 		std::unique_ptr<MultibodyPlant<double>> plant_ptr_;
 		std::unique_ptr<Context<double>> context_ptr_;
