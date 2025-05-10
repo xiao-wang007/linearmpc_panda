@@ -32,6 +32,25 @@ namespace MyUtils {
 						  PiecewisePolynomial<double>& in2,
 						  PiecewisePolynomial<double>& in3)
 			: trajs(in1), x_ref_spline(in2), u_ref_spline(in3) {}
+		
+		/* If ProcessedTrajMapToMat trajs has to be const, then a custom assign operator 
+		   is needed, then do this: 
+		//ProcessedTrajMapToMat trajs;
+		ProcessedSolution& operator=(const ProcessedSolution& other) 
+		{
+			if (this != &other) 
+			{ 
+			  //since trajs is const, it cannot be reassigned.
+			  //you can only copy other non-const members here.
+			}
+
+			return *this;
+		}
+		*/
+		
+		/* To allow reassignment, store trajs as a pointer or a reference 
+		std::shared_ptr<const ProcessedTrajMapToMat> trajs;
+		*/
 	};
 
 	//
