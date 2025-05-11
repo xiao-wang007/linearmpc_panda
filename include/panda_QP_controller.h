@@ -70,7 +70,8 @@ namespace linearmpc_panda {
     private:
 //        void desiredStateCallback(const panda_inverse_dynamics_controller::DesiredState::ConstPtr& msg);
 
-        ros::Subscriber state_subscriber_;
+        ros::Subscriber state_sub_;
+        ros::Subscriber executor_sub_;
 
         std::unique_ptr <franka_hw::FrankaModelHandle> model_handle_;
         std::unique_ptr <franka_hw::FrankaStateHandle> state_handle_;

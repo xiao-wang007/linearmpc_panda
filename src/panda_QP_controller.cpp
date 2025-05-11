@@ -34,8 +34,14 @@ namespace linearmpc_panda {
 		Nh_ = Nt - 1;
 		execution_length_ = h_mpc_ * n_exe_steps_;
 
-        // Create subscriber for user to send messages to the controller
-//        state_subscriber_ = node_handle.subscribe("/desired_state", 10, &InverseDynamicsController::desiredStateCallback, this);
+		/* Direct access to panda's current state, no need to use a sub,
+		   but here in gazebo, I need to do this through ros */
+		//get panda state, topic belongs to franka_gazebo
+		state_sub = node_handle.subscribe("joint_states", 1, &QPController::jointStateCallback, this);
+
+
+		//get interpolated solution trajectory 
+		executor_sub_ = node_handle.subscribe("executor", 1, &QPController::executorCallback, this);
 
         return true;
     }
@@ -65,6 +71,14 @@ namespace linearmpc_panda {
 		ts = Eigen::VectorXd::LinSpaced(Nt_, t_now_, t_now + (Nh_ * h_mpc_));
 		xref_now = data_proc_.x_ref_spline.vector_values(ts);
 		uref_now = data_proc_.u_ref_spline.vector_values(ts);
+
+		/* TODO: check flag if sim or real, then get the states of panda accordingly*/
+
+		//direct access to get current state, panda hardware interface
+		const std::array<double, 7>& q_now = state_handle_->getRobotState().q;
+		const auto& v_now = state_handle_->getRobotState().dq;
+		const auto& tau_now = state_handle_->getRobotState().tau_J;
+
 
 
         // Compute torques via QP and send them
