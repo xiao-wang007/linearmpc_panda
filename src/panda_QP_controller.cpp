@@ -30,6 +30,10 @@ namespace linearmpc_panda {
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint6"));
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint7"));
 
+		// compute mpc related parameters
+		Nh_ = Nt - 1;
+		execution_length_ = h_mpc_ * n_exe_steps_;
+
         // Create subscriber for user to send messages to the controller
 //        state_subscriber_ = node_handle.subscribe("/desired_state", 10, &InverseDynamicsController::desiredStateCallback, this);
 
@@ -54,7 +58,14 @@ namespace linearmpc_panda {
 
     }
 
-    void QPController::update(const ros::Time & /*time*/, const ros::Duration & /*period*/) {
+    void QPController::update(const ros::Time & /*time*/, const ros::Duration & /*period*/) 
+	{
+		//get current reference trajectory 
+		t_now_ = ros::Time::now().toSec();
+		ts = Eigen::VectorXd::LinSpaced(Nt_, t_now_, t_now + (Nh_ * h_mpc_));
+		xref_now = data_proc_.x_ref_spline.vector_values(ts);
+		uref_now = data_proc_.u_ref_spline.vector_values(ts);
+
 
         // Compute torques via QP and send them
 //        for (size_t i = 0; i < NUM_JOINTS; i++) {

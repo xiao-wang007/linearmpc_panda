@@ -80,13 +80,22 @@ namespace linearmpc_panda {
 		//drake::systems::DiscreteStateIndex state_index_;
         std::string panda_file_ {"/home/rosdrake/panda_arm.urdf"};
 		std::string integrator_;
-		int nx_, nu_, Nt_, Nh_;
-		double h_mpc_, h_env_, execution_length_;
+		int nx_ {14}; 
+        int nu_ {7}; 
+        int Nt_ {5}; 
+        int n_exe_steps_ {1};
+        double h_env_ {0.001}; //sim and panda control freq
+		double h_mpc_{0.04};
+        int Nh_ {};
+        double execution_length_ {};
+        Eigen::VectorXd ts_ {};
 		Eigen::MatrixXd Q_;
 		Eigen::MatrixXd R_;
 		Eigen::MatrixXd P_;
 		Eigen::VectorXd udot_up_ {Eigen::VectorXd::Constant(nu_, 1000.0)}; 
 		Eigen::VectorXd udot_low_ {-udot_up_}; 
+        Eigen::MatrixXd xref_now {};
+        Eigen::MatrixXd uref_now {};
 
         //member variables related to the reference traj
         int N_ = 60;
@@ -126,6 +135,9 @@ namespace linearmpc_panda {
 		Eigen::MatrixXd C_;
 		Eigen::VectorXd lb_;
 		Eigen::VectorXd ub_;
+
+        //memeber variables used in runtime
+        ros::Time t_now_;
 
     };
 } // namespace linearmpc_panda
