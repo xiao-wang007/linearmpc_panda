@@ -25,7 +25,9 @@ namespace MyUtils {
 		PiecewisePolynomial<double> u_ref_spline; 
 
 		//default constructor
-		ProcessedSolution() = default;
+		//ProcessedSolution() = default;
+		ProcessedSolution()
+        : trajs(), x_ref_spline(PiecewisePolynomial<double>()), u_ref_spline(PiecewisePolynomial<double>()) {}
 
 		//const data members must be initialized via a constructor initializer list
 		ProcessedSolution(ProcessedTrajMapToMat& in1,

@@ -1,7 +1,9 @@
 #pragma once
 
 #include "myutils.h"
+#include "controllers.h"
 #include <optional>
+#include <sensor_msgs/JointState.h> //this is generic ROS message header, needed for gazebo sim
 #include <controller_interface/multi_interface_controller.h>
 #include <hardware_interface/robot_hw.h>
 #include <hardware_interface/joint_command_interface.h>
@@ -55,21 +57,33 @@ namespace linearmpc_panda {
             hardware_interface::EffortJointInterface> {
     public:
         /* I should initialize my prog, ref_trajs, etc*/
-        bool init(hardware_interface::RobotHW *robot_hw, ros::NodeHandle &node_handle) override;
+        bool init(hardware_interface::RobotHW* robot_hw, ros::NodeHandle& node_handle) override;
 
-        void update(const ros::Time &time, const ros::Duration &period) override;
+        //
+        void update(const ros::Time& time, const ros::Duration& period) override;
 
-        void starting(const ros::Time &time) override;
+        //
+        void starting(const ros::Time& time) override;
 
+        //
+        //void init_plant();
+        //void init_prog();
+
+        //
+        void joint_state_callback_sim(const sensor_msgs::JointState::ConstPtr& msg);
+
+        //
+        void executor_callback(const std_msgs::Float64MultiArray::ConstPtr& msg);
+
+        //
         void go_to_init_pose(const Eigen::VectorXd& init_joint_pos);
 
-        void init_plant();
-
-        void init_prog();
+        //
+        bool initial_pose_ok();
 
     private:
-//        void desiredStateCallback(const panda_inverse_dynamics_controller::DesiredState::ConstPtr& msg);
-
+        /* TODO: make the matrix or vector size explicit where possible! Some are dependent on 
+                 MPC loop parameters, find a way to fix its size accordingly in the constructor */
         ros::Subscriber state_sub_;
         ros::Subscriber executor_sub_;
 
@@ -81,6 +95,7 @@ namespace linearmpc_panda {
 		//drake::systems::DiscreteStateIndex state_index_;
         std::string panda_file_ {"/home/rosdrake/panda_arm.urdf"};
 		std::string integrator_;
+        drake::math::RigidTransform<double> X_W_base_ {};
 		int nx_ {14}; 
         int nu_ {7}; 
         int Nt_ {5}; 
@@ -89,14 +104,18 @@ namespace linearmpc_panda {
 		double h_mpc_{0.04};
         int Nh_ {};
         double execution_length_ {};
+        double mpc_horizon_ {};
         Eigen::VectorXd ts_ {};
 		Eigen::MatrixXd Q_;
 		Eigen::MatrixXd R_;
 		Eigen::MatrixXd P_;
 		Eigen::VectorXd udot_up_ {Eigen::VectorXd::Constant(nu_, 1000.0)}; 
 		Eigen::VectorXd udot_low_ {-udot_up_}; 
-        Eigen::MatrixXd xref_now {};
-        Eigen::MatrixXd uref_now {};
+        Eigen::MatrixXd xref_now_ {};
+        Eigen::MatrixXd uref_now_ {};
+        Eigen::Matrix<double, NUM_JOINTS, 1> q_now_ {};
+        Eigen::Matrix<double, NUM_JOINTS, 1> v_now_ {};
+        Eigen::Matrix<double, NUM_JOINTS, 1> u_now_ {};
 
         //member variables related to the reference traj
         int N_ = 60;
@@ -104,41 +123,47 @@ namespace linearmpc_panda {
         std::vector<int> dims_ = {7, 7, 7, 1, 2, 2, 1, 1};
         std::vector<int> times_ = {N_, N_, N_, 1, 1, 1, 1, N_-1};
         std::string ref_traj_path_ = "/home/rosdrake/src/src/mpc/traj_refs/1.npy";
-        std::optional<MyUtils::ProcessedSolution> data_proc_; // Use std::optional
+        MyUtils::ProcessedSolution data_proc_; 
 
 		AutoDiffVecXd f_grad_;
 		PiecewisePolynomial<double> x_ref_spline_;
 		PiecewisePolynomial<double> u_ref_spline_;
 
-        //member variables related to the plant
-		std::vector<int> u_entries_;
-		std::unique_ptr<MultibodyPlant<double>> plant_ptr_;
-		std::unique_ptr<Context<double>> context_ptr_;
-		std::unique_ptr<MultibodyPlant<AutoDiffXd>> plantAD_ptr_;
-		std::unique_ptr<Context<AutoDiffXd>> contextAD_ptr_;
+        MyControllers::LinearMPCProb prob_;
+
+        ////member variables related to the plant
+		//std::vector<int> u_entries_;
+		//std::unique_ptr<MultibodyPlant<double>> plant_ptr_;
+		//std::unique_ptr<Context<double>> context_ptr_;
+		//std::unique_ptr<MultibodyPlant<AutoDiffXd>> plantAD_ptr_;
+		//std::unique_ptr<Context<AutoDiffXd>> contextAD_ptr_;
 		
-		//define the prog
-		MathematicalProgram prog_;
-		OsqpSolver solver_;
-		int nDecVar_;
-		MatrixDecisionVariable<Eigen::Dynamic, Eigen::Dynamic> dx_vars_;
-		MatrixDecisionVariable<Eigen::Dynamic, Eigen::Dynamic> du_vars_;
-		std::optional<solvers::Binding<drake::solvers::LinearConstraint>> cst_;
-		solvers::MathematicalProgramResult result_;
-		Eigen::MatrixXd dx_sol_;
-		Eigen::MatrixXd du_sol_;
-		Eigen::MatrixXd u_ref_cmd; // for interpolation
-		PiecewisePolynomial<double> u_ref_cmd_spline_;
-		//VectorDecisionVariable<Eigen::Dynamic> decVar_flat_;
-		int C_rows_;
-		int C_cols_;
-		int lb_dim_;
-		Eigen::MatrixXd C_;
-		Eigen::VectorXd lb_;
-		Eigen::VectorXd ub_;
+		////define the prog
+		//MathematicalProgram prog_;
+		//OsqpSolver solver_;
+		//int nDecVar_;
+		//MatrixDecisionVariable<Eigen::Dynamic, Eigen::Dynamic> dx_vars_;
+		//MatrixDecisionVariable<Eigen::Dynamic, Eigen::Dynamic> du_vars_;
+		//std::optional<solvers::Binding<drake::solvers::LinearConstraint>> cst_;
+		//solvers::MathematicalProgramResult result_;
+		//Eigen::MatrixXd dx_sol_;
+		//Eigen::MatrixXd du_sol_;
+		//Eigen::MatrixXd u_ref_cmd; // for interpolation
+		//PiecewisePolynomial<double> u_ref_cmd_spline_;
+		////VectorDecisionVariable<Eigen::Dynamic> decVar_flat_;
+		//int C_rows_ {};
+		//int C_cols_ {};
+		//int lb_dim_ {};
+		//Eigen::MatrixXd C_ {};
+		//Eigen::VectorXd lb_ {};
+		//Eigen::VectorXd ub_ {};
 
         //memeber variables used in runtime
-        ros::Time t_now_;
+        double t_now_ {};
+        franka::RobotState robot_state_ {};
+
+        //flag
+        bool do_sim_ {true};
 
     };
 } // namespace linearmpc_panda
