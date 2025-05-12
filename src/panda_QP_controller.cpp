@@ -80,6 +80,7 @@ namespace linearmpc_panda {
 		const auto& tau_now = state_handle_->getRobotState().tau_J;
 
 
+		// solve and update here!!!!
 
         // Compute torques via QP and send them
 //        for (size_t i = 0; i < NUM_JOINTS; i++) {
