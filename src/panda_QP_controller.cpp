@@ -59,26 +59,28 @@ namespace linearmpc_panda {
                                       Vector3<double>(0., -0.2, 0.));
 
 		//make Q
-		Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu, 200.0) * 12.;
-		Eigen::VectorXd v_coef = Eigen::VectorXd::Constant(nu, 1.) * 0.1;
+		Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
+		Eigen::VectorXd v_coef = Eigen::VectorXd::Constant(nu_, 1.) * 0.1;
 		Eigen::VectorXd Q_diags(q_coef.rows() + v_coef.rows());
 		Q_diags.head(q_coef.rows()) = q_coef;
 		Q_diags.tail(v_coef.rows()) = v_coef;
-		Eigen::DiagonalMatrix<double, nu*2> Q_sparse = Q_diags.asDiagonal();
+		Eigen::DiagonalMatrix<double, NUM_JOINTS*2> Q_sparse = Q_diags.asDiagonal();
 		Eigen::MatrixXd Q = Q_sparse.toDenseMatrix();
 
 		//make R
-		Eigen::VectorXd u_coef = Eigen::VectorXd::Constant(nu, 0.001);
+		Eigen::VectorXd u_coef = Eigen::VectorXd::Constant(nu_, 0.001);
 		Eigen::MatrixXd R = u_coef.asDiagonal();
 
 		//make P
-		Eigen::MatrixXd P = Eigen::MatrixXd::Identity(nx, nx) * 100;
+		Eigen::MatrixXd P = Eigen::MatrixXd::Identity(nx_, nx_) * 100;
 
-		prob_ = MyControllers::LinearMPCProb(panda_file_, integrator_, nx_, nu_, execution_length_, 
+
+		/* have to do this to avoid DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN() assertion as 
+		   I have a MultibodyPlant() inside LinearMPCProb()*/
+		prob_ = std::make_unique<MyControllers::LinearMPCProb>(panda_file_, integrator_, nx_, nu_, execution_length_, 
 											 h_mpc_, h_env_, Nt_, X_W_base_, Q, R, P, 
-											 data_proc.x_ref_spline, 
-											 data_proc.u_ref_spline); 
-
+											 data_proc_.x_ref_spline, 
+											 data_proc_.u_ref_spline); 
 
         return true;
     }
@@ -95,7 +97,7 @@ namespace linearmpc_panda {
 
 		if (!initial_pose_ok())
 		{
-			go_to_init_pose(xref_now_.col(0));
+			//go_to_init_pose(xref_now_.col(0));
 		}
     }
 
@@ -123,6 +125,12 @@ namespace linearmpc_panda {
 			v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.dq.data());
 			//u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.tau_J.data());
 		}
+
+		//call the mpc solver
+		states_now_ << q_now_, v_now_;
+		prob_->Solve_and_update_C_d_for_solver_errCoord(states_now_, )
+
+
 
 
         // Compute torques via QP and send them

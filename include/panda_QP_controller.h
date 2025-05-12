@@ -97,6 +97,7 @@ namespace linearmpc_panda {
 		std::string integrator_;
         drake::math::RigidTransform<double> X_W_base_ {};
 		int nx_ {14}; 
+        int nq_ {7};
         int nu_ {7}; 
         int Nt_ {5}; 
         int n_exe_steps_ {1};
@@ -129,7 +130,8 @@ namespace linearmpc_panda {
 		PiecewisePolynomial<double> x_ref_spline_;
 		PiecewisePolynomial<double> u_ref_spline_;
 
-        MyControllers::LinearMPCProb prob_;
+        /* Now I learnt, using unique_ptr avoids DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN assertion */
+        std::unique_ptr<MyControllers::LinearMPCProb> prob_;
 
         ////member variables related to the plant
 		//std::vector<int> u_entries_;
@@ -161,6 +163,7 @@ namespace linearmpc_panda {
         //memeber variables used in runtime
         double t_now_ {};
         franka::RobotState robot_state_ {};
+        Eigen::VectorXd state_now_ {};
 
         //flag
         bool do_sim_ {true};
