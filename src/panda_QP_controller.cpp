@@ -39,6 +39,19 @@ namespace linearmpc_panda {
 		//get interpolated solution trajectory 
 		executor_sub_ = node_handle.subscribe("executor", 1, &QPController::executor_callback, this);
 
+		//create a publisher to send the mpc solution to the executor
+		mpc_sol_pub_ = node_handle.advertise<std_msgs::Float64MultiArray>("mpc_solution", 1);
+
+		//define the meta data of a std_msgs::Float64MultiArray for mpc_solution
+		mpc_sol_msg_.layout.dim.resize(2);
+		mpc_sol_msg_.layout.dim[0].label = "rows";
+		mpc_sol_msg_.layout.dim[0].size = nu_;
+		mpc_sol_msg_.layout.dim[0].stride = nu_ * Nh_; // assuming row-major here
+		mpc_sol_msg_.layout.dim[1].label = "cols";
+		mpc_sol_msg_.layout.dim[1].size = Nh_;
+		mpc_sol_msg_.layout.dim[1].stride = Nh_;
+		mpc_sol_msg_.data.resize(nu_ * Nh_);  // Preallocate
+
 		// compute mpc related parameters, this has to go first as init_prog() uses them
 		Nh_ = Nt_ - 1;
 		execution_length_ = h_mpc_ * n_exe_steps_;
@@ -127,8 +140,11 @@ namespace linearmpc_panda {
 		}
 
 		//call the mpc solver
-		states_now_ << q_now_, v_now_;
-		prob_->Solve_and_update_C_d_for_solver_errCoord(states_now_, )
+		state_now_ << q_now_, v_now_;
+		t_now_ = ros::Time::now().toSec();
+		prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, t_now_);
+
+		//need to publish mpc solution to the executor
 
 
 

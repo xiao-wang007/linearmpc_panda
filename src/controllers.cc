@@ -326,8 +326,16 @@ namespace MyControllers {
 			return;
 		}	
 		
+		//u_ref_cmd of shape: (nu_, Nh_)
 		u_ref_cmd = u_ref_horizon.block(0, 1, nu_, Nh_) + du_sol_.transpose(); //u_ref_horizon[1:, :]
-		u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc.tail(Nt_-1), u_ref_cmd);
+		//u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc.tail(Nt_-1), u_ref_cmd);
+		
+		//map solution to std_msgs::Float64MultiArray 
+		mpc_sol_msg_.data.resize(u_ref_cmd.size());
+		Eigen::Map<Eigen::MatrixXd>(mpc_sol_msg_.data.data(), nu_, Nh_) = u_ref_cmd;
+
+		//publish the solution message
+		mpc_sol_pub_.publish(mpc_sol_msg_);
 	}
 
 	//######################################################################################

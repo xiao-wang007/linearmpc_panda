@@ -11,6 +11,7 @@
 #include <franka_hw/franka_state_interface.h>
 #include <franka_hw/franka_cartesian_command_interface.h>
 #include <ros/node_handle.h>
+#include <ros/publisher.h>
 #include <ros/time.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <Eigen/Core>
@@ -86,6 +87,7 @@ namespace linearmpc_panda {
                  MPC loop parameters, find a way to fix its size accordingly in the constructor */
         ros::Subscriber state_sub_;
         ros::Subscriber executor_sub_;
+        ros::Publisher mpc_sol_pub_;
 
         std::unique_ptr <franka_hw::FrankaModelHandle> model_handle_;
         std::unique_ptr <franka_hw::FrankaStateHandle> state_handle_;
@@ -132,6 +134,7 @@ namespace linearmpc_panda {
 
         /* Now I learnt, using unique_ptr avoids DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN assertion */
         std::unique_ptr<MyControllers::LinearMPCProb> prob_;
+        std_msgs::Float64MultiArray mpc_sol_msg_;
 
         ////member variables related to the plant
 		//std::vector<int> u_entries_;
