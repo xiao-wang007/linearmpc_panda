@@ -326,7 +326,7 @@ namespace MyControllers {
 			return;
 		}	
 		
-		u_ref_cmd = u_ref_horizon.block(0, 1, nu_, Nh_) + du_sol_; //u_ref_horizon[1:, :]
+		u_ref_cmd = u_ref_horizon.block(0, 1, nu_, Nh_) + du_sol_.transpose(); //u_ref_horizon[1:, :]
 		u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc.tail(Nt_-1), u_ref_cmd);
 	}
 
