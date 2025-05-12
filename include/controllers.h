@@ -119,8 +119,6 @@ namespace MyControllers{
 		solvers::MathematicalProgramResult result_;
 		Eigen::MatrixXd dx_sol_;
 		Eigen::MatrixXd du_sol_;
-		Eigen::MatrixXd u_ref_cmd; // for interpolation
-		PiecewisePolynomial<double> u_ref_cmd_spline_;
 		//VectorDecisionVariable<Eigen::Dynamic> decVar_flat_;
 		int C_rows_;
 		int C_cols_;

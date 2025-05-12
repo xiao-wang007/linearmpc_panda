@@ -32,68 +32,68 @@ namespace linearmpc_panda {
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint6"));
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint7"));
 
-		/* Direct access to panda's current state, no need to use a sub, but here in gazebo, I need to do this through ros */
-		//get panda state, topic belongs to franka_gazebo, which operates as 1kHz, then the callback is also called at 1kHz
-		state_sub_ = node_handle.subscribe("joint_states", 1, &QPController::joint_state_callback_sim, this);
+		///* Direct access to panda's current state, no need to use a sub, but here in gazebo, I need to do this through ros */
+		////get panda state, topic belongs to franka_gazebo, which operates as 1kHz, then the callback is also called at 1kHz
+		//state_sub_ = node_handle.subscribe("joint_states", 1, &QPController::joint_state_callback_sim, this);
+
+
+        //// Convert current robot position and velocity into Eigen data storage
+        //Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> q_now_(robot_state_.q.data());
+        //Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> v_now_(robot_state_.dq.data());
+		//Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> u_now_(robot_state_.tau_J.data());
 
 		//get interpolated solution trajectory 
-		executor_sub_ = node_handle.subscribe("executor", 1, &QPController::executor_callback, this);
+		executor_sub_ = node_handle.subscribe("upsampling_executor", 1, &QPController::executor_callback, this);
 
-		//create a publisher to send the mpc solution to the executor
-		mpc_sol_pub_ = node_handle.advertise<std_msgs::Float64MultiArray>("mpc_solution", 1);
+		////create a publisher to send the mpc solution to the executor
+		//mpc_sol_pub_ = node_handle.advertise<std_msgs::Float64MultiArray>("mpc_solution", 1);
 
-		//define the meta data of a std_msgs::Float64MultiArray for mpc_solution
-		mpc_sol_msg_.layout.dim.resize(2);
-		mpc_sol_msg_.layout.dim[0].label = "rows";
-		mpc_sol_msg_.layout.dim[0].size = nu_;
-		mpc_sol_msg_.layout.dim[0].stride = nu_ * Nh_; // assuming row-major here
-		mpc_sol_msg_.layout.dim[1].label = "cols";
-		mpc_sol_msg_.layout.dim[1].size = Nh_;
-		mpc_sol_msg_.layout.dim[1].stride = Nh_;
-		mpc_sol_msg_.data.resize(nu_ * Nh_);  // Preallocate
+		////define the meta data of a std_msgs::Float64MultiArray for mpc_solution
+		//mpc_sol_msg_.layout.dim.resize(2);
+		//mpc_sol_msg_.layout.dim[0].label = "rows";
+		//mpc_sol_msg_.layout.dim[0].size = nu_;
+		//mpc_sol_msg_.layout.dim[0].stride = nu_ * Nh_; // assuming row-major here
+		//mpc_sol_msg_.layout.dim[1].label = "cols";
+		//mpc_sol_msg_.layout.dim[1].size = Nh_;
+		//mpc_sol_msg_.layout.dim[1].stride = Nh_;
+		//mpc_sol_msg_.data.resize(nu_ * Nh_);  // Preallocate
 
-		// compute mpc related parameters, this has to go first as init_prog() uses them
-		Nh_ = Nt_ - 1;
-		execution_length_ = h_mpc_ * n_exe_steps_;
-		mpc_horizon_ = h_mpc_ * Nh_;
+		//// compute mpc related parameters, this has to go first as init_prog() uses them
+		//Nh_ = Nt_ - 1;
+		//execution_length_ = h_mpc_ * n_exe_steps_;
+		//mpc_horizon_ = h_mpc_ * Nh_;
 
-        // init prog
-        //this->init_prog();
+        //// load x_ref and u_ref
+		//data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
 
-        // init the plant   
-        //this->init_plant();
+		////init MyControllers::LinearMPCProb() here
+		//integrator_ = "RK4";
+        //X_W_base_ = RigidTransform<double>(RollPitchYaw<double>(Vector3<double>(0., 0., -90.) * PI / 180.),
+                                      //Vector3<double>(0., -0.2, 0.));
 
-        // load x_ref and u_ref
-		data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
+		////make Q
+		//Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
+		//Eigen::VectorXd v_coef = Eigen::VectorXd::Constant(nu_, 1.) * 0.1;
+		//Eigen::VectorXd Q_diags(q_coef.rows() + v_coef.rows());
+		//Q_diags.head(q_coef.rows()) = q_coef;
+		//Q_diags.tail(v_coef.rows()) = v_coef;
+		//Eigen::DiagonalMatrix<double, NUM_JOINTS*2> Q_sparse = Q_diags.asDiagonal();
+		//Eigen::MatrixXd Q = Q_sparse.toDenseMatrix();
 
-		//init MyControllers::LinearMPCProb() here
-		integrator_ = "RK4";
-        X_W_base_ = RigidTransform<double>(RollPitchYaw<double>(Vector3<double>(0., 0., -90.) * PI / 180.),
-                                      Vector3<double>(0., -0.2, 0.));
+		////make R
+		//Eigen::VectorXd u_coef = Eigen::VectorXd::Constant(nu_, 0.001);
+		//Eigen::MatrixXd R = u_coef.asDiagonal();
 
-		//make Q
-		Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
-		Eigen::VectorXd v_coef = Eigen::VectorXd::Constant(nu_, 1.) * 0.1;
-		Eigen::VectorXd Q_diags(q_coef.rows() + v_coef.rows());
-		Q_diags.head(q_coef.rows()) = q_coef;
-		Q_diags.tail(v_coef.rows()) = v_coef;
-		Eigen::DiagonalMatrix<double, NUM_JOINTS*2> Q_sparse = Q_diags.asDiagonal();
-		Eigen::MatrixXd Q = Q_sparse.toDenseMatrix();
-
-		//make R
-		Eigen::VectorXd u_coef = Eigen::VectorXd::Constant(nu_, 0.001);
-		Eigen::MatrixXd R = u_coef.asDiagonal();
-
-		//make P
-		Eigen::MatrixXd P = Eigen::MatrixXd::Identity(nx_, nx_) * 100;
+		////make P
+		//Eigen::MatrixXd P = Eigen::MatrixXd::Identity(nx_, nx_) * 100;
 
 
-		/* have to do this to avoid DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN() assertion as 
-		   I have a MultibodyPlant() inside LinearMPCProb()*/
-		prob_ = std::make_unique<MyControllers::LinearMPCProb>(panda_file_, integrator_, nx_, nu_, execution_length_, 
-											 h_mpc_, h_env_, Nt_, X_W_base_, Q, R, P, 
-											 data_proc_.x_ref_spline, 
-											 data_proc_.u_ref_spline); 
+		///* have to do this to avoid DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN() assertion as 
+		   //I have a MultibodyPlant() inside LinearMPCProb()*/
+		//prob_ = std::make_unique<MyControllers::LinearMPCProb>(panda_file_, integrator_, nx_, nu_, execution_length_, 
+											 //h_mpc_, h_env_, Nt_, X_W_base_, Q, R, P, 
+											 //data_proc_.x_ref_spline, 
+											 //data_proc_.u_ref_spline); 
 
         return true;
     }
@@ -101,10 +101,10 @@ namespace linearmpc_panda {
 	//#######################################################################################
     void QPController::starting(const ros::Time& time) 
     {
-        // index the first horizon
-		auto t0 = ros::Time::now().toSec();
-		xref_now_ = data_proc_.x_ref_spline.vector_values(Eigen::VectorXd::LinSpaced(Nt_, t0, t0+mpc_horizon_));
-		uref_now_ = data_proc_.u_ref_spline.vector_values(Eigen::VectorXd::LinSpaced(Nt_, t0, t0+mpc_horizon_));
+        //// index the first horizon
+		//auto t0 = ros::Time::now().toSec();
+		//xref_now_ = data_proc_.x_ref_spline.vector_values(Eigen::VectorXd::LinSpaced(Nt_, t0, t0+mpc_horizon_));
+		//uref_now_ = data_proc_.u_ref_spline.vector_values(Eigen::VectorXd::LinSpaced(Nt_, t0, t0+mpc_horizon_));
 
         // set the condition here to check if current robot state is close to x0_ref
 
@@ -117,34 +117,36 @@ namespace linearmpc_panda {
 	//#######################################################################################
     void QPController::update(const ros::Time& time, const ros::Duration& period) 
 	{
-		//get current reference trajectory 
-		t_now_ = ros::Time::now().toSec();
-		ts_ = Eigen::VectorXd::LinSpaced(Nt_, t_now_, t_now_+mpc_horizon_);
-		xref_now_ = data_proc_.x_ref_spline.vector_values(ts_);
-		uref_now_ = data_proc_.u_ref_spline.vector_values(ts_);
+		////get current reference trajectory 
+		//t_now_ = ros::Time::now().toSec();
+		//ts_ = Eigen::VectorXd::LinSpaced(Nt_, t_now_, t_now_+mpc_horizon_);
+		//xref_now_ = data_proc_.x_ref_spline.vector_values(ts_);
+		//uref_now_ = data_proc_.u_ref_spline.vector_values(ts_);
 
-		/* TODO: check flag if sim or real, then get the states of panda accordingly*/
+		///* TODO: check flag if sim or real, then get the states of panda accordingly*/
 
-		//direct access to get current state, panda hardware interface
-		const std::array<double, 7>& q_now = state_handle_->getRobotState().q;
-		const auto& v_now = state_handle_->getRobotState().dq;
-		const auto& tau_now = state_handle_->getRobotState().tau_J;
+		////direct access to get current state, panda hardware interface
+		//const std::array<double, 7>& q_now = state_handle_->getRobotState().q;
+		//const auto& v_now = state_handle_->getRobotState().dq;
+		//const auto& tau_now = state_handle_->getRobotState().tau_J;
 
-		// get state_now directly from hardware if not in simulation
-		if (!do_sim_)
-		{
-			robot_state_ = state_handle_->getRobotState();
-			q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.q.data());
-			v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.dq.data());
-			//u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.tau_J.data());
-		}
+		//// get state_now directly from hardware if not in simulation
+		//if (!do_sim_)
+		//{
+			//robot_state_ = state_handle_->getRobotState();
+			//q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.q.data());
+			//v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.dq.data());
+			////u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.tau_J.data());
 
-		//call the mpc solver
+			//// then publish the state 
+		//}
+
+		////call the mpc solver
 		state_now_ << q_now_, v_now_;
-		t_now_ = ros::Time::now().toSec();
-		prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, t_now_);
+		//t_now_ = ros::Time::now().toSec();
+		//prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, t_now_);
 
-		//need to publish mpc solution to the executor
+		//need to publish mpc solution so the executor can catch it
 
 
 
@@ -257,6 +259,21 @@ namespace linearmpc_panda {
 	bool QPController::initial_pose_ok()
 	{
 		return true;
+	}
+
+	//#######################################################################################
+	void QPController::executor_callback(const std_msgs::Float64MultiArray::ConstPtr& msg) 
+	{
+		//get the upsampled solution
+		if (msg->data.size() == 0)
+		{
+			return;
+		}
+		else
+		{
+			
+			
+		}
 	}
 
 } //namespace linearmpc_panda

@@ -288,7 +288,9 @@ namespace MyControllers {
 	}
 
 	//######################################################################################
-	void LinearMPCProb::Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, double t_now)
+	void LinearMPCProb::Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
+		  														 double t_now, 
+																 Eigen::MatrixXd& u_ref_cmd)
 	{
 		//query the spline using current time
 		auto ts_mpc = Eigen::VectorXd::LinSpaced(Nt_, t_now, t_now + h_mpc_ * Nh_);
@@ -330,12 +332,12 @@ namespace MyControllers {
 		u_ref_cmd = u_ref_horizon.block(0, 1, nu_, Nh_) + du_sol_.transpose(); //u_ref_horizon[1:, :]
 		//u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc.tail(Nt_-1), u_ref_cmd);
 		
-		//map solution to std_msgs::Float64MultiArray 
-		mpc_sol_msg_.data.resize(u_ref_cmd.size());
-		Eigen::Map<Eigen::MatrixXd>(mpc_sol_msg_.data.data(), nu_, Nh_) = u_ref_cmd;
+		////map solution to std_msgs::Float64MultiArray 
+		//mpc_sol_msg_.data.resize(u_ref_cmd.size());
+		//Eigen::Map<Eigen::MatrixXd>(mpc_sol_msg_.data.data(), nu_, Nh_) = u_ref_cmd_;
 
-		//publish the solution message
-		mpc_sol_pub_.publish(mpc_sol_msg_);
+		////publish the solution message
+		//mpc_sol_pub_.publish(mpc_sol_msg_);
 	}
 
 	//######################################################################################
