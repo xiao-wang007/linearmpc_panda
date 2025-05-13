@@ -68,7 +68,7 @@ private:
     //drake::systems::DiscreteStateIndex state_index_;
     bool do_sim_ {true}; 
     std::string panda_file_ {"/home/rosdrake/panda_arm.urdf"};
-    std::string integrator_;
+    std::string integrator_ {"RK4"};
     drake::math::RigidTransform<double> X_W_base_ {};
     int nx_ {14}; 
     int nq_ {7};

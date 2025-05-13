@@ -15,6 +15,7 @@ MPCSolverNode::MPCSolverNode()
     /*TODO: create the publisher in QPController interface to publish panda hardware current state*/
 	//state_sub_ = nh.subscribe("joint_states_pandaHW", 1, &MPCSolverNode::joint_state_callback_HW, this);
 
+    std::cout << "mpc_solver_node: check1" << std::endl;
 
 	//define the meta data of a std_msgs::Float64MultiArray for mpc_solution
 	mpc_sol_msg_.layout.dim.resize(2);
@@ -35,7 +36,6 @@ MPCSolverNode::MPCSolverNode()
     data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
 
     //init MyControllers::LinearMPCProb() here
-    integrator_ = "RK4";
     X_W_base_ = RigidTransform<double>(RollPitchYaw<double>(Vector3<double>(0., 0., -90.) * PI / 180.),
                                     Vector3<double>(0., -0.2, 0.));
 
@@ -63,6 +63,8 @@ MPCSolverNode::MPCSolverNode()
                                                            data_proc_.u_ref_spline); 
     //init solver output
     u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nh_);
+
+    std::cout << "mpc_solver_node inited!" << std::endl;
 }
 
 //########################################################################################

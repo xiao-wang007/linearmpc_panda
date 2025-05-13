@@ -96,6 +96,7 @@ namespace MyControllers {
 		ub_ = Eigen::VectorXd::Zero(C_rows_);
 
 		cst_ = prog_.AddLinearConstraint(C_, lb_, ub_, decVar_flat);
+		std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% here checking1" << std::endl;
 
 		//initialize solver output
 		u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nh_);
