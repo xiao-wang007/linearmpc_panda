@@ -5,7 +5,7 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "simple_node");
     ros::NodeHandle nh;
 
-    ros::Publisher pub = nh.advertise<std_msgs::String>("example_topic", 10);
+    ros::Publisher pub = nh.advertise<std_msgs::String>("upsampled_sol_traj", 1);
 
     ros::Rate rate(10); // 10 Hz
     while (ros::ok()) {

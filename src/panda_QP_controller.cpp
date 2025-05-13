@@ -36,14 +36,16 @@ namespace linearmpc_panda {
 		////get panda state, topic belongs to franka_gazebo, which operates as 1kHz, then the callback is also called at 1kHz
 		//state_sub_ = node_handle.subscribe("joint_states", 1, &QPController::joint_state_callback_sim, this);
 
+		// Create a publisher for the Panda hardware state
+		state_pub_ = node_handle.advertise<sensor_msgs::JointState>("joint_state_pandaHW", 1);
 
         //// Convert current robot position and velocity into Eigen data storage
         //Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> q_now_(robot_state_.q.data());
         //Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> v_now_(robot_state_.dq.data());
 		//Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> u_now_(robot_state_.tau_J.data());
 
-		//get interpolated solution trajectory 
-		executor_sub_ = node_handle.subscribe("upsampling_executor", 1, &QPController::executor_callback, this);
+		//get upsampled solution trajectory, at hardware frequency 1kHz 
+		executor_sub_ = node_handle.subscribe("upsampled_sol_traj", 1, &QPController::executor_callback, this);
 
 		////create a publisher to send the mpc solution to the executor
 		//mpc_sol_pub_ = node_handle.advertise<std_msgs::Float64MultiArray>("mpc_solution", 1);
@@ -117,6 +119,24 @@ namespace linearmpc_panda {
 	//#######################################################################################
     void QPController::update(const ros::Time& time, const ros::Duration& period) 
 	{
+		joint_state_msg_.header.stamp = ros::Time::now();
+
+		// Populate the message with the current joint positions and velocities
+		joint_state_msg_.position.assign(q_now_.data(), q_now_.data() + q_now_.size());
+		joint_state_msg_.velocity.assign(v_now_.data(), v_now_.data() + v_now_.size());
+		// Optionally include effort data if available
+		// joint_state_msg.effort.assign(u_now_.data(), u_now_.data() + u_now_.size());
+
+		// OUT: Publish pandaHW's current state
+		/* conditional, as my mpc_solver_node can sub to gazebo. Needed here as it is separate node */
+		if (!do_sim_) state_pub_.publish(joint_state_msg_);
+		
+
+		// IN: set the torques to the robot, obtained from mpc_solver_node
+		for (size_t i = 0; i < NUM_JOINTS; i++) {
+			joint_handles_[i].setCommand(u_cmd_[i]); //u_cmd_ is from the sub
+		}
+
 		////get current reference trajectory 
 		//t_now_ = ros::Time::now().toSec();
 		//ts_ = Eigen::VectorXd::LinSpaced(Nt_, t_now_, t_now_+mpc_horizon_);
@@ -142,7 +162,7 @@ namespace linearmpc_panda {
 		//}
 
 		////call the mpc solver
-		state_now_ << q_now_, v_now_;
+		//state_now_ << q_now_, v_now_;
 		//t_now_ = ros::Time::now().toSec();
 		//prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, t_now_);
 
@@ -262,17 +282,16 @@ namespace linearmpc_panda {
 	}
 
 	//#######################################################################################
-	void QPController::executor_callback(const std_msgs::Float64MultiArray::ConstPtr& msg) 
+	void QPController::executor_callback(const std_msgs::Float64MultiArray::ConstPtr& dim7_vec_msg) 
 	{
 		//get the upsampled solution
-		if (msg->data.size() == 0)
+		if (dim7_vec_msg->data.size() == 0)
 		{
 			return;
 		}
 		else
 		{
-			
-			
+			u_cmd_ = Eigen::Map<const Eigen::VectorXd>(dim7_vec_msg->data.data(), dim7_vec_msg->data.size());
 		}
 	}
 

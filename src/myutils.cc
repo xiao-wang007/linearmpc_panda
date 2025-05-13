@@ -121,8 +121,8 @@ const ProcessedSolution ProcessSolTraj(const std::string& file_path,
 	//Eigen::Matrix<AutoDiffXd, Eigen::Dynamic, Eigen::Dynamic> u_ad = trajs["us"].cast<AutoDiffXd>();
 
     //PrintStdVector(x_ref);
-    const auto x_ref_spline = PiecewisePolynomial<double>::FirstOrderHold(ts, x.transpose());
-    const auto u_ref_spline = PiecewisePolynomial<double>::FirstOrderHold(ts, trajs["us"].transpose());
+    auto x_ref_spline = PiecewisePolynomial<double>::FirstOrderHold(ts, x.transpose());
+    auto u_ref_spline = PiecewisePolynomial<double>::FirstOrderHold(ts, trajs["us"].transpose());
     //const auto x_ref_spline_ad = PiecewisePolynomial<AutoDiffXd>::FirstOrderHold(ts_ad, x_ad.transpose());
     //const auto u_ref_spline_ad = PiecewisePolynomial<AutoDiffXd>::FirstOrderHold(ts_ad, u_ad.transpose());
 

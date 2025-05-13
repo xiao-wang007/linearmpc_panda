@@ -5,15 +5,15 @@ MPCSolverNode::MPCSolverNode()
 {
     // Initialize the ROS node
     ros::NodeHandle nh;
-    solver_timer_ = nh.createTimer(ros::Duration(0.01), &MPCSolverNode::run, this);
-    mpc_sol_pub_ = nh.advertise<std_msgs::Float64MultiArray>("mpc_solution", 1);
+    solver_timer_ = nh.createTimer(ros::Duration(0.01), &MPCSolverNode::solve_and_update, this); // 100Hz
+    mpc_sol_pub_ = nh.advertise<std_msgs::Float64MultiArray>("mpc_sol", 1);
 
 	/* Direct access to panda's current state, no need to use a sub, but here in gazebo, I need to do this through ros */
 	//get panda state, topic belongs to franka_gazebo, which operates as 1kHz, then the callback is also called at 1kHz
-	state_sub_ = node_handle.subscribe("joint_states", 1, &MPCSolverNode::joint_state_callback_sim, this);
+	state_sub_ = nh.subscribe("joint_states", 1, &MPCSolverNode::joint_state_callback_sim, this);
 
     /*TODO: create the publisher in QPController interface to publish panda hardware current state*/
-	//state_sub_ = node_handle.subscribe("joint_states_pandaHW", 1, &MPCSolverNode::joint_state_callback_HW, this);
+	//state_sub_ = nh.subscribe("joint_states_pandaHW", 1, &MPCSolverNode::joint_state_callback_HW, this);
 
 
 	//define the meta data of a std_msgs::Float64MultiArray for mpc_solution
@@ -58,21 +58,28 @@ MPCSolverNode::MPCSolverNode()
     /* have to do this to avoid DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN() assertion as 
         I have a MultibodyPlant() inside LinearMPCProb()*/
     prob_ = std::make_unique<MyControllers::LinearMPCProb>(panda_file_, integrator_, nx_, nu_, execution_length_, 
-                                            h_mpc_, h_env_, Nt_, X_W_base_, Q, R, P, 
-                                            data_proc_.x_ref_spline, 
-                                            data_proc_.u_ref_spline); 
-
+                                                           h_mpc_, h_env_, Nt_, X_W_base_, Q, R, P, 
+                                                           data_proc_.x_ref_spline, 
+                                                           data_proc_.u_ref_spline); 
+    //init solver output
+    u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nh_);
 }
 
 //########################################################################################
-MPCSolverNode::run() 
+void MPCSolverNode::run() 
 {
     ros::spin();
 }
 
 //########################################################################################
-MPCSolverNode::solve_and_update(const ros::TimerEvent& event) 
+void MPCSolverNode::solve_and_update(const ros::TimerEvent& event) 
 {
+    // Log the time since the last callback
+    ROS_INFO("Time since last callback: %f seconds", (event.current_real - event.last_real).toSec());
+
+    // Log the duration of the last callback
+    ROS_INFO("Last callback duration: %f seconds", event.profile.last_duration.toSec());
+
     // Lock the mutex to ensure thread safety
     std::lock_guard<std::mutex> lock(mpc_mutex_);
 
@@ -85,7 +92,8 @@ MPCSolverNode::solve_and_update(const ros::TimerEvent& event)
     //call the mpc solver
     state_now_ << q_now_, v_now_; // these are updated in the subcription callback
     t_now_ = ros::Time::now().toSec();
-    prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, t_now_, u_ref_cmd_);
+    prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, t_now_);
+    prob_->Get_solution(u_ref_cmd_);
 
     //map solution to std_msgs::Float64MultiArray 
     mpc_sol_msg_.data.resize(u_ref_cmd_.size());
@@ -106,7 +114,7 @@ void MPCSolverNode::joint_state_callback_sim(const sensor_msgs::JointState::Cons
 }
 
 //########################################################################################
-void MPCSolverNode::joint_state_callback_sim(const sensor_msgs::JointState::ConstPtr& msg) 
+void MPCSolverNode::joint_state_callback_HW(const sensor_msgs::JointState::ConstPtr& msg) 
 {
     //store current state
     // get the current joint position and velocity

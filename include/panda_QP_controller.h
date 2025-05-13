@@ -1,6 +1,5 @@
 #pragma once
 
-#include "myutils.h"
 #include "controllers.h"
 #include <optional>
 #include <sensor_msgs/JointState.h> //this is generic ROS message header, needed for gazebo sim
@@ -87,6 +86,7 @@ namespace linearmpc_panda {
                  MPC loop parameters, find a way to fix its size accordingly in the constructor */
         //ros::Subscriber state_sub_;
         ros::Subscriber executor_sub_; // sub to set u_cmd at 1kHz
+        ros::Publisher state_pub_; // pub to panda state for mpc solve
         //ros::Publisher mpc_sol_pub_;
         //std_msgs::Float64MultiArray mpc_sol_msg_;
 
@@ -166,7 +166,9 @@ namespace linearmpc_panda {
         //memeber variables used in runtime
         double t_now_ {};
         franka::RobotState robot_state_ {};
+        sensor_msgs::JointState joint_state_msg_ {};
         Eigen::VectorXd state_now_ {};
+        Eigen::VectorXd u_cmd_ {};
 
         //flag
         bool do_sim_ {true};

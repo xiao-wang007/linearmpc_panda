@@ -96,6 +96,9 @@ namespace MyControllers {
 		ub_ = Eigen::VectorXd::Zero(C_rows_);
 
 		cst_ = prog_.AddLinearConstraint(C_, lb_, ub_, decVar_flat);
+
+		//initialize solver output
+		u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nh_);
 	} 
 
 	//######################################################################################
@@ -289,8 +292,7 @@ namespace MyControllers {
 
 	//######################################################################################
 	void LinearMPCProb::Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
-		  														 double t_now, 
-																 Eigen::MatrixXd& u_ref_cmd)
+		  														 double t_now)
 	{
 		//query the spline using current time
 		auto ts_mpc = Eigen::VectorXd::LinSpaced(Nt_, t_now, t_now + h_mpc_ * Nh_);
@@ -327,9 +329,12 @@ namespace MyControllers {
 			}
 			return;
 		}	
+
+		assert((u_ref_cmd_.rows() == du_sol_.cols() && u_ref_cmd_.cols() == du_sol_.rows()) 
+				&& "u_ref_cmd_ and du_sol_.T dim mismatch!");
 		
 		//u_ref_cmd of shape: (nu_, Nh_)
-		u_ref_cmd = u_ref_horizon.block(0, 1, nu_, Nh_) + du_sol_.transpose(); //u_ref_horizon[1:, :]
+		u_ref_cmd_ = u_ref_horizon.block(0, 1, nu_, Nh_) + du_sol_.transpose(); //u_ref_horizon[1:, :]
 		//u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc.tail(Nt_-1), u_ref_cmd);
 		
 		////map solution to std_msgs::Float64MultiArray 
@@ -341,14 +346,12 @@ namespace MyControllers {
 	}
 
 	//######################################################################################
-	void LinearMPCProb::Output_tau_cmd()
+	void LinearMPCProb::Get_solution(Eigen::MatrixXd& output)
 	{
-		//get time now here from ros 
+		assert((u_ref_cmd_.rows() == output.rows() && u_ref_cmd_.cols() == output.cols()) 
+				&&"u_ref_cmd_ and output dim mismatch!");
 
-		//index the solution spline
-
-		//send the torque here;
-
+		output = u_ref_cmd_;
 	}
 
 

@@ -82,10 +82,11 @@ namespace MyControllers{
 										   const Eigen::VectorXd dudt_up = {},
 										   const Eigen::VectorXd dudt_low = {});
 		//
-		void Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, double t_now);
+		void Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
+													  double t_now);
 
 		//
-		void Output_tau_cmd();
+		void Get_solution(Eigen::MatrixXd& output);
 
 
 	private:
@@ -126,6 +127,9 @@ namespace MyControllers{
 		Eigen::MatrixXd C_;
 		Eigen::VectorXd lb_;
 		Eigen::VectorXd ub_;
+
+		//solver output
+		Eigen::VectorXd u_ref_cmd_;
 	};
 
 }

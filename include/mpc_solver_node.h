@@ -6,6 +6,7 @@
 #include <unsupported/Eigen/KroneckerProduct>
 #include <ros/ros.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <sensor_msgs/JointState.h>
 
 #define NUM_JOINTS 7
 #define PI 3.14
@@ -109,7 +110,7 @@ private:
     // run-time member data
     double t_now_ {};
     Eigen::VectorXd state_now_ {};
-    Eigen::MatrixXd u_ref_cmd_ {}; // Make this explicit for performance
+    Eigen::MatrixXd u_ref_cmd_ {}; // initialized in constructor
 
     // Mutex for thread safety
     std::mutex mpc_mutex_;
