@@ -165,7 +165,7 @@ target_include_directories(controllers PUBLIC
         )
 
 #################################################################################################
-# Add the myutils.cc file
+# Add myutils
 add_library(myutils
     src/myutils.cc
 )
