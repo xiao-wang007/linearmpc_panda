@@ -37,7 +37,7 @@ namespace linearmpc_panda {
 		//state_sub_ = node_handle.subscribe("joint_states", 1, &QPController::joint_state_callback_sim, this);
 
 		// Create a publisher for the Panda hardware state
-		state_pub_ = node_handle.advertise<sensor_msgs::JointState>("joint_state_pandaHW", 1);
+		//state_pub_ = node_handle.advertise<sensor_msgs::JointState>("joint_state_pandaHW", 1);
 
         //// Convert current robot position and velocity into Eigen data storage
         //Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> q_now_(robot_state_.q.data());

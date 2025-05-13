@@ -2,7 +2,7 @@
 
 #include <ros/ros.h>
 #include <Eigen/Dense>
-#include <std_msgs/Float64MultiArray.h>
+#include <linearmpc_panda/StampedFloat64MultiArray.h>
 #include <drake/common/trajectories/piecewise_polynomial.h>
 
 class MPCExecutorNode {
@@ -12,7 +12,7 @@ public:
 
 private:
     // Callback for receiving the MPC solution
-    void mpc_sol_callback(const std_msgs::Float64MultiArray::ConstPtr& msg);
+    void mpc_sol_callback(const linearmpc_panda::StampedFloat64MultiArray::ConstPtr& msg);
 
     // Publish the upsampled u_cmd
     void publish_upsampled_command(const ros::TimerEvent& event);
@@ -24,14 +24,18 @@ private:
     ros::Timer upsample_timer_;
     std_msgs::Float64MultiArray upsampled_msg_;
 
-    // Drake's PiecewisePolynomial for interpolation
-    drake::trajectories::PiecewisePolynomial<double> u_cmd_spline_;
-
     // Parameters
-    double solver_frequency_; // Frequency of the MPC solver
-    double executor_frequency_; // Frequency of the executor
-    int nu_; // Number of control inputs
+    double executor_frequency_ {1000.0}; // Frequency of the executor
+    double h_mpc_ {0.04};
+    int nu_ {7}; // Number of control inputs
+    int Nh_ {4};
 
-    // Storage for the upsampled command
-    Eigen::VectorXd u_cmd_now_;
+    //run time parameters 
+    drake::trajectories::PiecewisePolynomial<double> u_cmd_spline_;
+    Eigen::VectorXd u_cmd_now_;// Storage for the upsampled command
+    int rows_ {}; // for reconstructing the matrix
+    int cols_ {};
+    Eigen::MatrixXd u_sol_; // Matrix to hold the MPC solution
+    double t_stamp_ {}; // to hold extracted time of mpc solution message
+    double t_now_ {};
 };

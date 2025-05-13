@@ -5,7 +5,7 @@
 #include <Eigen/Dense>
 #include <unsupported/Eigen/KroneckerProduct>
 #include <ros/ros.h>
-#include <std_msgs/Float64MultiArray.h>
+#include <linearmpc_panda/StampedFloat64MultiArray.h>
 #include <sensor_msgs/JointState.h>
 
 #define NUM_JOINTS 7

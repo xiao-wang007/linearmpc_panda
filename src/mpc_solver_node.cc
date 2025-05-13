@@ -123,3 +123,18 @@ void MPCSolverNode::joint_state_callback_HW(const sensor_msgs::JointState::Const
     //u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->effort.data());
 }
 
+
+//########################################################################################
+int main(int argc, char** argv) 
+{
+    // Initialize the ROS node
+    ros::init(argc, argv, "mpc_solver_node");
+    
+    // Create an instance of the MPCSolverNode class
+    MPCSolverNode mpc_solver_node;
+    
+    // Run the node
+    mpc_solver_node.run();
+    
+    return 0;
+}

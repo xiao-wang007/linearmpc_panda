@@ -71,8 +71,9 @@ endif (TARGET Eigen3::Eigen)
 
 add_message_files(
         FILES
-        DesiredState.msg
-        DesiredTorqueState.msg
+        # DesiredState.msg
+        # DesiredTorqueState.msg
+        StampedFloat64MultiArray.msg
 )
 
 generate_messages(
@@ -123,34 +124,8 @@ catkin_package(
                         message_runtime
 )
 
-###########
-## Build ##
-###########
-
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-)
-
-add_library(linearmpc_panda
-        src/panda_QP_controller.cpp 
-        include/panda_QP_controller.h)
-
-target_link_libraries(linearmpc_panda ${catkin_LIBRARIES} Eigen3::Eigen drake::drake)
-add_dependencies(linearmpc_panda ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
-
-target_include_directories(linearmpc_panda PUBLIC
-        include
-        external/cnpy # controllers.h still depends on it
-        )
-
-install(TARGETS linearmpc_panda
-        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        )
-
 #################################################################################################
-# Add the controllers.cc file
+# Add the controllers file
 add_library(controllers
     src/controllers.cc
 )
@@ -181,11 +156,35 @@ target_include_directories(myutils PUBLIC
         )
 add_subdirectory(external/cnpy) # needed by myutils
 
+###############
+## add nodes ##
+###############
+#################################################################################################
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+)
+
+add_library(linearmpc_panda
+        src/panda_QP_controller.cpp 
+        include/panda_QP_controller.h)
+
+target_link_libraries(linearmpc_panda ${catkin_LIBRARIES} Eigen3::Eigen drake::drake)
+add_dependencies(linearmpc_panda ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+
+target_include_directories(linearmpc_panda PUBLIC
+        include
+        external/cnpy # controllers.h still depends on it
+        )
+
+install(TARGETS linearmpc_panda
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        )
+
 #################################################################################################
 # add mpc_solver_node executable
 add_executable(mpc_solver_node 
                src/mpc_solver_node.cc
-               src/mpc_solver_node_main.cc)
+               )
 # link the executable wot the required libraries
 target_link_libraries(mpc_solver_node 
                       ${catkin_LIBRARIES} 
@@ -204,6 +203,33 @@ target_include_directories(mpc_solver_node PUBLIC
         )
 # install the executable
 install(TARGETS mpc_solver_node
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+#################################################################################################
+# Add mpc_executor_node executable
+add_executable(mpc_executor_node 
+               src/mpc_executor_node.cc
+               )
+
+# Link the executable to the required libraries
+target_link_libraries(mpc_executor_node 
+                      ${catkin_LIBRARIES} 
+                      Eigen3::Eigen 
+                      drake::drake
+                      controllers)
+                      #myutils)
+
+# Add dependencies to ensure proper build order
+add_dependencies(mpc_executor_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+
+# Include the header files
+target_include_directories(mpc_executor_node PUBLIC
+        include
+        #external/cnpy
+        )
+
+# Install the executable
+install(TARGETS mpc_executor_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #################################################################################################
