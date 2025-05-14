@@ -107,6 +107,7 @@ void MPCSolverNode::solve_and_update(const ros::TimerEvent& event)
     prob_->Get_solution(u_ref_cmd_); //Pass by argument
 
     std::cout << "u_ref_cmd_ of shape: (" << u_ref_cmd_.rows() << ", " << u_ref_cmd_.cols() << ")" << std::endl;
+    std::cout << "u_ref_cmd_: \n" << u_ref_cmd_ << std::endl;
 
     //map solution to linearmpc_panda::StampedFloat64MultiArray 
     Eigen::Map<Eigen::MatrixXd>(mpc_sol_msg_.data.data.data(), nu_, Nh_) = u_ref_cmd_;

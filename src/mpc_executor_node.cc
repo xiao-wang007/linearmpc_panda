@@ -31,8 +31,16 @@ void MPCExecutorNode::mpc_sol_callback(const linearmpc_panda::StampedFloat64Mult
 
     assert(rows_ == nu_ && cols_ == Nh_ && "MPC solution dimensions mismatch in executor node!");
 
+    std::cout << "msg->data.data: ";
+    for (const auto& value : msg->data.data) {
+        std::cout << value << " ";
+    }
+
+    std::cout << std::endl;
     u_sol_ = Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
         msg->data.data.data(), rows_, cols_);
+    
+    std::cout << "u_sol_: \n" << u_sol_ << std::endl;
 
     // Create time points for the spline, using stamped time
     t_stamp_ = msg->header.stamp;
@@ -60,7 +68,7 @@ void MPCExecutorNode::publish_upsampled_command(const ros::TimerEvent& event)
     // Evaluate the spline to get the upsampled control command
     u_cmd_now_ = u_cmd_spline_.value(t_now_);
 
-    ROS_INFO_STREAM("Publishing upsampled command u_cmd_now: " << u_cmd_now_.transpose());
+    //ROS_INFO_STREAM("Publishing upsampled command u_cmd_now: " << u_cmd_now_.transpose());
 
     // Publish the upsampled command
     upsampled_msg_.data.resize(u_cmd_now_.size());

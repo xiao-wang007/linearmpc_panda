@@ -250,6 +250,7 @@ namespace MyControllers {
 		assert((fi_grad.cols() == nx_+nu_ && fi_grad.rows() == nx_) && "f0_grad dim is wrong!"); 
 
 		auto A0 = fi_grad.block(0, 0, nx_, nx_);
+		std::cout << "A0: " << A0 << std::endl;
 		auto B0 = fi_grad.block(0, nx_, nx_, nu_);
 		C_.block(0, 0, nx_, nu_) = B0;
 
@@ -308,6 +309,9 @@ namespace MyControllers {
 		auto x_ref_horizon = x_ref_spline_.vector_values(ts_mpc);
 		auto u_ref_horizon = u_ref_spline_.vector_values(ts_mpc);
 
+		//std::cout << "[LinearMPCProb] x_ref_horizon: " << x_ref_horizon.transpose() << std::endl;
+		//std::cout << "[LinearMPCProb] u_ref_horizon: " << u_ref_horizon.transpose() << std::endl;
+
 		assert(x_ref_horizon.cols() == Nt_ && "x_ref_horizon dim is wrong!");
 		assert(u_ref_horizon.cols() == Nt_ && "u_ref_horizon dim is wrong!");
 
@@ -326,7 +330,7 @@ namespace MyControllers {
 			dx_sol_ = result_.GetSolution(dx_vars_);
 			du_sol_ = result_.GetSolution(du_vars_);
 			//std::cout << "x_sol: " << x_sol.transpose() << std::endl;
-			//std::cout << "u_sol: " << u_sol.transpose() << std::endl;
+			std::cout << "[LinearMPCProb] du_sol_: " << du_sol_ << std::endl;
 		} else {
 			std::cout << "Solver failed!" << std::endl;
 			std::cout << "Constraint violations: " << std::endl;
@@ -345,6 +349,8 @@ namespace MyControllers {
 		//u_ref_cmd of shape: (nu_, Nh_)
 		u_ref_cmd_ = u_ref_horizon.block(0, 1, nu_, Nh_) + du_sol_.transpose(); //u_ref_horizon[1:, :]
 		//u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc.tail(Nt_-1), u_ref_cmd);
+
+		std::cout << "[LinearMPCProb] u_ref_cmd_: " << u_ref_cmd_ << std::endl;
 		
 		////map solution to std_msgs::Float64MultiArray 
 		//mpc_sol_msg_.data.resize(u_ref_cmd.size());
