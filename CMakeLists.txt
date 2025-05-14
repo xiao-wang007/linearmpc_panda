@@ -125,18 +125,18 @@ catkin_package(
 )
 
 #################################################################################################
-# Add the controllers file
-add_library(controllers
-    src/controllers.cc
+# Add the linear_mpc_prob file
+add_library(linear_mpc_prob
+    src/linear_mpc_prob.cc
 )
-target_link_libraries(controllers
+target_link_libraries(linear_mpc_prob
     ${catkin_LIBRARIES}
     Eigen3::Eigen
     drake::drake
 )
-target_include_directories(controllers PUBLIC
+target_include_directories(linear_mpc_prob PUBLIC
         include
-        external/cnpy # needed by controllers.cc for matrix sparsity visualization
+        external/cnpy # needed by linear_mpc_prob.cc for matrix sparsity visualization
         )
 
 #################################################################################################
@@ -173,7 +173,7 @@ add_dependencies(linearmpc_panda ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gene
 
 target_include_directories(linearmpc_panda PUBLIC
         include
-        external/cnpy # controllers.h still depends on it
+        external/cnpy # linear_mpc_prob.h still depends on it
         )
 
 install(TARGETS linearmpc_panda
@@ -190,7 +190,7 @@ target_link_libraries(mpc_solver_node
                       ${catkin_LIBRARIES} 
                       Eigen3::Eigen 
                       drake::drake
-                      controllers
+                      linear_mpc_prob
                       myutils)
 
 # add dependencies to ensure proper build order
@@ -216,7 +216,7 @@ target_link_libraries(mpc_executor_node
                       ${catkin_LIBRARIES} 
                       Eigen3::Eigen 
                       drake::drake
-                      controllers)
+                      linear_mpc_prob)
                       #myutils)
 
 # Add dependencies to ensure proper build order

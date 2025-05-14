@@ -1,6 +1,6 @@
 #pragma once
 
-#include "controllers.h"
+#include "linear_mpc_prob.h"
 #include <mutex>
 #include <Eigen/Dense>
 #include <unsupported/Eigen/KroneckerProduct>
@@ -63,7 +63,7 @@ private:
     ros::Timer solver_timer_;
     ros::Publisher mpc_sol_pub_;
     ros::Subscriber state_sub_;
-    std_msgs::Float64MultiArray mpc_sol_msg_;
+    linearmpc_panda::StampedFloat64MultiArray mpc_sol_msg_;
 
     //drake::systems::DiscreteStateIndex state_index_;
     bool do_sim_ {true}; 
@@ -80,7 +80,6 @@ private:
     int Nh_ {};
     double execution_length_ {};
     double mpc_horizon_ {};
-    Eigen::VectorXd ts_ {};
     Eigen::MatrixXd Q_;
     Eigen::MatrixXd R_;
     Eigen::MatrixXd P_;
@@ -108,11 +107,13 @@ private:
     std::unique_ptr<MyControllers::LinearMPCProb> prob_;
 
     // run-time member data
-    double t_now_ {};
-    Eigen::VectorXd state_now_ {};
-    Eigen::MatrixXd u_ref_cmd_ {}; // initialized in constructor
+    ros::Time t_now_ {};
+    //Eigen::VectorXd state_now_ {}; bad practic without initialization as size is not know, can't do << q_now_, v_now_ without resizing
+    //Eigen::Matrix<double, NUM_JOINTS*2, 1> state_now_ {};  have to use macros since I cannot use nu_ here
+    Eigen::VectorXd state_now_ {}; // initialize in constructor
+    Eigen::MatrixXd u_ref_cmd_ {}; // initialize in constructor
 
     // Mutex for thread safety
     std::mutex mpc_mutex_;
-
+    ros::Time t_init_node_ {};
 };

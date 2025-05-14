@@ -3,10 +3,15 @@
 //###############################################################################
 MPCSolverNode::MPCSolverNode() 
 {
+    ros::Time t_begin = ros::Time::now();
+    std::cout << '\n' << std::endl;
+    ROS_INFO("Starting init of mpc_solver_node! taken %f seconds", t_begin.toSec());
+    std::cout << '\n' << std::endl;
+
     // Initialize the ROS node
     ros::NodeHandle nh;
     solver_timer_ = nh.createTimer(ros::Duration(0.01), &MPCSolverNode::solve_and_update, this); // 100Hz
-    mpc_sol_pub_ = nh.advertise<std_msgs::Float64MultiArray>("mpc_sol", 1);
+    mpc_sol_pub_ = nh.advertise<linearmpc_panda::StampedFloat64MultiArray>("mpc_sol", 1);
 
 	/* Direct access to panda's current state, no need to use a sub, but here in gazebo, I need to do this through ros */
 	//get panda state, topic belongs to franka_gazebo, which operates as 1kHz, then the callback is also called at 1kHz
@@ -15,17 +20,16 @@ MPCSolverNode::MPCSolverNode()
     /*TODO: create the publisher in QPController interface to publish panda hardware current state*/
 	//state_sub_ = nh.subscribe("joint_states_pandaHW", 1, &MPCSolverNode::joint_state_callback_HW, this);
 
-    std::cout << "mpc_solver_node: check1" << std::endl;
 
 	//define the meta data of a std_msgs::Float64MultiArray for mpc_solution
-	mpc_sol_msg_.layout.dim.resize(2);
-	mpc_sol_msg_.layout.dim[0].label = "rows";
-	mpc_sol_msg_.layout.dim[0].size = nu_;
-	mpc_sol_msg_.layout.dim[0].stride = nu_ * Nh_; // assuming row-major here
-	mpc_sol_msg_.layout.dim[1].label = "cols";
-	mpc_sol_msg_.layout.dim[1].size = Nh_;
-	mpc_sol_msg_.layout.dim[1].stride = Nh_;
-	mpc_sol_msg_.data.resize(nu_ * Nh_);  // Preallocate
+	mpc_sol_msg_.data.layout.dim.resize(2);
+	mpc_sol_msg_.data.layout.dim[0].label = "rows";
+	mpc_sol_msg_.data.layout.dim[0].size = nu_;
+	mpc_sol_msg_.data.layout.dim[0].stride = nu_ * Nh_; // assuming row-major here
+	mpc_sol_msg_.data.layout.dim[1].label = "cols";
+	mpc_sol_msg_.data.layout.dim[1].size = Nh_;
+	mpc_sol_msg_.data.layout.dim[1].stride = Nh_;
+	mpc_sol_msg_.data.data.resize(nu_ * Nh_);  // Preallocate
 
 	// compute mpc related parameters, this has to go first as init_prog() uses them
 	Nh_ = Nt_ - 1;
@@ -62,9 +66,11 @@ MPCSolverNode::MPCSolverNode()
                                                            data_proc_.x_ref_spline, 
                                                            data_proc_.u_ref_spline); 
     //init solver output
+    state_now_ = Eigen::VectorXd::Zero(nx_);
     u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nh_);
 
-    std::cout << "mpc_solver_node inited!" << std::endl;
+    t_init_node_ = ros::Time::now();
+    ROS_INFO("mpc_solver_node inited! taken %f seconds", (t_init_node_ - t_begin).toSec());
 }
 
 //########################################################################################
@@ -76,33 +82,38 @@ void MPCSolverNode::run()
 //########################################################################################
 void MPCSolverNode::solve_and_update(const ros::TimerEvent& event) 
 {
-    // Log the time since the last callback
-    ROS_INFO("Time since last callback: %f seconds", (event.current_real - event.last_real).toSec());
-
-    // Log the duration of the last callback
-    ROS_INFO("Last callback duration: %f seconds", event.profile.last_duration.toSec());
-
     // Lock the mutex to ensure thread safety
     std::lock_guard<std::mutex> lock(mpc_mutex_);
 
-    //get current reference trajectory 
-    t_now_ = ros::Time::now().toSec();
-    ts_ = Eigen::VectorXd::LinSpaced(Nt_, t_now_, t_now_+mpc_horizon_);
-    xref_now_ = data_proc_.x_ref_spline.vector_values(ts_);
-    uref_now_ = data_proc_.u_ref_spline.vector_values(ts_);
+    ////get current reference trajectory for debugging 
+    //t_now_ = ros::Time::now();
+    //auto t_start = (t_now_-t_init_node_).toSec();
+    //auto ts_ = Eigen::VectorXd::LinSpaced(Nt_, t_start, t_start+mpc_horizon_);
+    //xref_now_ = data_proc_.x_ref_spline.vector_values(ts_);
+    //uref_now_ = data_proc_.u_ref_spline.vector_values(ts_);
+
+    //std::cout << "uref_now_: \n" << uref_now_ << std::endl;
 
     //call the mpc solver
     state_now_ << q_now_, v_now_; // these are updated in the subcription callback
-    t_now_ = ros::Time::now().toSec();
+    t_now_ = ros::Time::now();
     prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, t_now_);
-    prob_->Get_solution(u_ref_cmd_);
 
-    //map solution to std_msgs::Float64MultiArray 
-    mpc_sol_msg_.data.resize(u_ref_cmd_.size());
-    Eigen::Map<Eigen::MatrixXd>(mpc_sol_msg_.data.data(), nu_, Nh_) = u_ref_cmd_;
+    //get time here for stamping the message
+    mpc_sol_msg_.header.stamp = ros::Time::now();
+    mpc_sol_msg_.header.frame_id = "mpc_sol";
+
+    //save solution to member variable u_ref_cmd_
+    prob_->Get_solution(u_ref_cmd_); //Pass by argument
+
+    //map solution to linearmpc_panda::StampedFloat64MultiArray 
+    mpc_sol_msg_.data.data.resize(u_ref_cmd_.size());
+    Eigen::Map<Eigen::MatrixXd>(mpc_sol_msg_.data.data.data(), nu_, Nh_) = u_ref_cmd_;
 
     //publish the solution message
     mpc_sol_pub_.publish(mpc_sol_msg_);
+
+    ROS_INFO("mpc_solver_node::solve_and_update() runs once");
 }
 
 //########################################################################################

@@ -1,5 +1,5 @@
 linearmpc_controller: # controller name
-  type: linearmpc_panda/QP_controller
+  type: linearmpc_panda/LinearMPCController
   arm_id: $(arg arm_id)
   joint_names:
       - $(arg arm_id)_joint1

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "controllers.h"
+#include "linear_mpc_prob.h"
 #include <optional>
 #include <sensor_msgs/JointState.h> //this is generic ROS message header, needed for gazebo sim
 #include <controller_interface/multi_interface_controller.h>
@@ -51,7 +51,7 @@ namespace linearmpc_panda {
     //using namespace drake; // for all eigen types
     //using namespace drake::solvers;
 
-    class QPController : public controller_interface::MultiInterfaceController<
+    class LinearMPCController: public controller_interface::MultiInterfaceController<
             franka_hw::FrankaModelInterface,
             franka_hw::FrankaStateInterface,
             hardware_interface::EffortJointInterface> {

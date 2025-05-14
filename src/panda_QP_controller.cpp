@@ -7,7 +7,7 @@
 namespace linearmpc_panda {
 
 	//#######################################################################################
-    bool QPController::init(hardware_interface::RobotHW *robot_hw, ros::NodeHandle &node_handle) {
+    bool LinearMPCController::init(hardware_interface::RobotHW *robot_hw, ros::NodeHandle &node_handle) {
         //Get Franka model and state interfaces
         auto *model_interface = robot_hw->get<franka_hw::FrankaModelInterface>();
         auto *state_interface = robot_hw->get<franka_hw::FrankaStateInterface>();
@@ -34,7 +34,7 @@ namespace linearmpc_panda {
 
 		///* Direct access to panda's current state, no need to use a sub, but here in gazebo, I need to do this through ros */
 		////get panda state, topic belongs to franka_gazebo, which operates as 1kHz, then the callback is also called at 1kHz
-		//state_sub_ = node_handle.subscribe("joint_states", 1, &QPController::joint_state_callback_sim, this);
+		//state_sub_ = node_handle.subscribe("joint_states", 1, &LinearMPCController::joint_state_callback_sim, this);
 
 		// Create a publisher for the Panda hardware state
 		//state_pub_ = node_handle.advertise<sensor_msgs::JointState>("joint_state_pandaHW", 1);
@@ -45,7 +45,7 @@ namespace linearmpc_panda {
 		//Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> u_now_(robot_state_.tau_J.data());
 
 		//get upsampled solution trajectory, at hardware frequency 1kHz 
-		executor_sub_ = node_handle.subscribe("upsampled_sol_traj", 1, &QPController::executor_callback, this);
+		executor_sub_ = node_handle.subscribe("upsampled_sol_traj", 1, &LinearMPCController::executor_callback, this);
 
 		////create a publisher to send the mpc solution to the executor
 		//mpc_sol_pub_ = node_handle.advertise<std_msgs::Float64MultiArray>("mpc_solution", 1);
@@ -101,7 +101,7 @@ namespace linearmpc_panda {
     }
 
 	//#######################################################################################
-    void QPController::starting(const ros::Time& time) 
+    void LinearMPCController::starting(const ros::Time& time) 
     {
         //// index the first horizon
 		//auto t0 = ros::Time::now().toSec();
@@ -117,7 +117,7 @@ namespace linearmpc_panda {
     }
 
 	//#######################################################################################
-    void QPController::update(const ros::Time& time, const ros::Duration& period) 
+    void LinearMPCController::update(const ros::Time& time, const ros::Duration& period) 
 	{
 		joint_state_msg_.header.stamp = ros::Time::now();
 
@@ -127,9 +127,11 @@ namespace linearmpc_panda {
 		// Optionally include effort data if available
 		// joint_state_msg.effort.assign(u_now_.data(), u_now_.data() + u_now_.size());
 
-		// OUT: Publish pandaHW's current state
+		// OBSOLETE------OUT: Publish pandaHW's current state
 		/* conditional, as my mpc_solver_node can sub to gazebo. Needed here as it is separate node */
-		if (!do_sim_) state_pub_.publish(joint_state_msg_);
+		//if (!do_sim_) state_pub_.publish(joint_state_msg_);
+
+		/* panda hardware also publishes a joint states, so just sub to it */
 		
 
 		// IN: set the torques to the robot, obtained from mpc_solver_node
@@ -179,7 +181,7 @@ namespace linearmpc_panda {
     }
 
     // Some callback function required for us to send a custom message type to it
-//    void QPController::desiredStateCallback(const QPController::DesiredState::ConstPtr& msg) {
+//    void LinearMPCController::desiredStateCallback(const LinearMPCController::DesiredState::ConstPtr& msg) {
 //        // TODO - Would be good to impose safety limits on commanded velocity
 //        // as well as keeping commanded position within joint limits
 //        for(size_t i = 0; i < NUM_JOINTS; i++) {
@@ -191,7 +193,7 @@ namespace linearmpc_panda {
 
 
 	//#######################################################################################
-    //void QPController::init_plant() 
+    //void LinearMPCController::init_plant() 
     //{
         //// Initialize the plant here
 		//plant_ptr_ = std::make_unique<MultibodyPlant<double>>(h_env_);
@@ -210,7 +212,7 @@ namespace linearmpc_panda {
     //}
 
 	//#######################################################################################
-    //void QPController::init_prog() 
+    //void LinearMPCController::init_prog() 
     //{
         //// Initialize the prog here
 		//nDecVar_ = Nh_ * (nx_ + nu_);
@@ -266,7 +268,7 @@ namespace linearmpc_panda {
     //}
 
 	//#######################################################################################
-	void QPController::joint_state_callback_sim(const sensor_msgs::JointState::ConstPtr& msg) 
+	void LinearMPCController::joint_state_callback_sim(const sensor_msgs::JointState::ConstPtr& msg) 
 	{
 		//store current state
 		// get the current joint position and velocity
@@ -276,13 +278,13 @@ namespace linearmpc_panda {
 	}
 
 	//#######################################################################################
-	bool QPController::initial_pose_ok()
+	bool LinearMPCController::initial_pose_ok()
 	{
 		return true;
 	}
 
 	//#######################################################################################
-	void QPController::executor_callback(const std_msgs::Float64MultiArray::ConstPtr& dim7_vec_msg) 
+	void LinearMPCController::executor_callback(const std_msgs::Float64MultiArray::ConstPtr& dim7_vec_msg) 
 	{
 		//get the upsampled solution
 		if (dim7_vec_msg->data.size() == 0)
@@ -297,5 +299,5 @@ namespace linearmpc_panda {
 
 } //namespace linearmpc_panda
 
-PLUGINLIB_EXPORT_CLASS(linearmpc_panda::QPController, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(linearmpc_panda::LinearMPCController, controller_interface::ControllerBase)
 

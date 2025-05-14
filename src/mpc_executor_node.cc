@@ -32,14 +32,16 @@ void MPCExecutorNode::mpc_sol_callback(const linearmpc_panda::StampedFloat64Mult
     Eigen::VectorXd times = Eigen::VectorXd::LinSpaced(Nh_, t_stamp_, t_stamp_ + Nh_*h_mpc_);
 
     // Create a PiecewisePolynomial spline for the control inputs
-    u_cmd_spline_ = drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(times, u_sol_);
+    u_cmd_spline_ = drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(times, u_sol_);   problem may be here!
 }
 
 //########################################################################################
 void MPCExecutorNode::publish_upsampled_command(const ros::TimerEvent& event) 
 {
+    std::cout << "blablablablablablablablablablablablablablablablabla" << std::endl;
     if (u_cmd_spline_.empty()) {
         ROS_WARN_THROTTLE(1.0, "No spline data available yet.");
+    std::cout << "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" << std::endl;
         return;
     }
 
@@ -48,6 +50,8 @@ void MPCExecutorNode::publish_upsampled_command(const ros::TimerEvent& event)
 
     // Evaluate the spline to get the upsampled control command
     u_cmd_now_ = u_cmd_spline_.value(t_now_);
+
+    ROS_INFO_STREAM("Publishing upsampled command u_cmd_now: " << u_cmd_now_.transpose());
 
     // Publish the upsampled command
     upsampled_msg_.data.resize(u_cmd_now_.size());

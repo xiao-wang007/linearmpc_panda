@@ -5,6 +5,7 @@
 #include <cassert>
 #include <optional>
 #include "myutils.h"
+#include <ros/ros.h>
 
 #include <drake/solvers/osqp_solver.h>
 #include <drake/solvers/solve.h>
@@ -83,6 +84,8 @@ namespace MyControllers{
 										   const Eigen::VectorXd dudt_low = {});
 		//
 		void Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
+													  ros::Time t_now);
+		void Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
 													  double t_now);
 
 		//
@@ -129,7 +132,10 @@ namespace MyControllers{
 		Eigen::VectorXd ub_;
 
 		//solver output
-		Eigen::VectorXd u_ref_cmd_;
+		Eigen::MatrixXd u_ref_cmd_;
+
+		//ros::time
+		ros::Time t_init_node_ {};
 	};
 
 }

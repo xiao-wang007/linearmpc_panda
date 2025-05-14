@@ -1,4 +1,4 @@
-#include "controllers.h"
+#include "linear_mpc_prob.h"
 
 namespace MyControllers {
 
@@ -22,6 +22,9 @@ namespace MyControllers {
 		    Nh_(Nt - 1), execution_length_(execution_length), Q_(Q), R_(R), P_(P),
 			x_ref_spline_(x_ref_spline), u_ref_spline_(u_ref_spline), integrator_(integrator)
 	{ 
+		ros::Time t_begin = ros::Time::now();
+		ROS_INFO("start at init of linear_mpc_prob.cc! \n");
+		
 		/*make the plant for the controller with arm only, 
 		  no need to weld the finger and set the base pose as only joint space,
 		  but need to weld panda base. Otherwise, it is a floating body with 6 extra dofs */
@@ -100,6 +103,9 @@ namespace MyControllers {
 
 		//initialize solver output
 		u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nh_);
+
+		t_init_node_ = ros::Time::now();
+		ROS_INFO("LinearMPCProb inited! %f \n", (ros::Time::now() - t_begin).toSec());
 	} 
 
 	//######################################################################################
@@ -109,6 +115,7 @@ namespace MyControllers {
 		assert((*y).size() == nx_ && "y dim is not the same as nx_!");
 		plantAD_ptr_->SetPositionsAndVelocities(contextAD_ptr_.get(), x.segment(0, nx_));
 		auto nv = plantAD_ptr_->num_velocities();
+
 
 		// build the dynamics
 		MatrixX<AutoDiffXd> M(nv, nv);
@@ -132,6 +139,7 @@ namespace MyControllers {
 	{	
 		//std::cout << plantAD_ptr_->num_velocities() << std::endl;
 		assert((*yi).size() == nx_ && "y dim is not the same as nx_!");
+
 		plantAD_ptr_->SetPositionsAndVelocities(contextAD_ptr_.get(), xi);
 		auto nv = plantAD_ptr_->num_velocities();
 
@@ -142,12 +150,13 @@ namespace MyControllers {
 
 		VectorX<AutoDiffXd> C(nv);
 		plantAD_ptr_->CalcBiasTerm(*(contextAD_ptr_.get()), &C);
-
 		const auto G = plantAD_ptr_->CalcGravityGeneralizedForces(*(contextAD_ptr_.get()));
 
 		//auto ddq = M_inv * (G + x.tail(nu_) - C);
 		auto ddq = M_inv * (G + ui - C);
 		//std::cout << "ddq size: " << ddq << std::endl;
+		//std::cout << "xi.tail(nv): " << xi.tail(nv).transpose() << std::endl;
+		//std::cout << "ddq: " << ddq.transpose() << std::endl;
 		(*yi).head(nv) = xi.tail(nv);
 		(*yi).tail(nv) = ddq;
 	}
@@ -195,8 +204,6 @@ namespace MyControllers {
 		this->f_ad(xi + h_mpc_*f3,     ui, &f4);
 
 		*yi = xi + (h_mpc_/6.0) * (f1 + 2*f2 + 2*f3 + f4);
-		std::cout << "hello here 2" << std::endl;
-		std::cout << *yi << std::endl;
 	}
 
 	//######################################################################################
@@ -233,7 +240,6 @@ namespace MyControllers {
 													  const Eigen::VectorXd dudt_low)
 	{
 		/* x_ref, u_ref are of Eigen::Matrix<Autodiff, m, n> */
-		//Continue here!
 		AutoDiffVecXd fi(nx_);
 		auto xi_ad = math::InitializeAutoDiff(x_ref.col(0), nx_+nu_, 0);
 		auto ui_ad = math::InitializeAutoDiff(u_ref.col(0), nx_+nu_, nx_); // 3rd arg, grad starting index 
@@ -293,10 +299,12 @@ namespace MyControllers {
 
 	//######################################################################################
 	void LinearMPCProb::Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
-		  														 double t_now)
+		  														 ros::Time t_now)
 	{
 		//query the spline using current time
-		auto ts_mpc = Eigen::VectorXd::LinSpaced(Nt_, t_now, t_now + h_mpc_ * Nh_);
+		//auto ts_mpc = Eigen::VectorXd::LinSpaced(Nt_, t_now, t_now + h_mpc_*Nh_);
+		auto ts_mpc = Eigen::VectorXd::LinSpaced(Nt_, (t_now - t_init_node_).toSec(), (t_now - t_init_node_).toSec() + h_mpc_*Nh_);
+		std::cout << "ts_mpc: " << ts_mpc.transpose() << std::endl;
 		auto x_ref_horizon = x_ref_spline_.vector_values(ts_mpc);
 		auto u_ref_horizon = u_ref_spline_.vector_values(ts_mpc);
 
@@ -347,6 +355,10 @@ namespace MyControllers {
 	}
 
 	//######################################################################################
+	void LinearMPCProb::Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
+		  														 double t_now)
+	{}
+	//######################################################################################
 	void LinearMPCProb::Get_solution(Eigen::MatrixXd& output)
 	{
 		assert((u_ref_cmd_.rows() == output.rows() && u_ref_cmd_.cols() == output.cols()) 
@@ -354,7 +366,6 @@ namespace MyControllers {
 
 		output = u_ref_cmd_;
 	}
-
 
 	//######################################################################################
 	LinearMPCProb::~LinearMPCProb()
