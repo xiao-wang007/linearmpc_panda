@@ -20,6 +20,10 @@ MPCSolverNode::MPCSolverNode()
     /*TODO: create the publisher in QPController interface to publish panda hardware current state*/
 	//state_sub_ = nh.subscribe("joint_states_pandaHW", 1, &MPCSolverNode::joint_state_callback_HW, this);
 
+	// compute mpc related parameters, this has to go first as init_prog() uses them
+	Nh_ = Nt_ - 1;
+	execution_length_ = h_mpc_ * n_exe_steps_;
+	mpc_horizon_ = h_mpc_ * Nh_;
 
 	//define the meta data of a std_msgs::Float64MultiArray for mpc_solution
 	mpc_sol_msg_.data.layout.dim.resize(2);
@@ -31,10 +35,6 @@ MPCSolverNode::MPCSolverNode()
 	mpc_sol_msg_.data.layout.dim[1].stride = Nh_;
 	mpc_sol_msg_.data.data.resize(nu_ * Nh_);  // Preallocate
 
-	// compute mpc related parameters, this has to go first as init_prog() uses them
-	Nh_ = Nt_ - 1;
-	execution_length_ = h_mpc_ * n_exe_steps_;
-	mpc_horizon_ = h_mpc_ * Nh_;
 
     // load x_ref and u_ref
     data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
@@ -106,8 +106,9 @@ void MPCSolverNode::solve_and_update(const ros::TimerEvent& event)
     //save solution to member variable u_ref_cmd_
     prob_->Get_solution(u_ref_cmd_); //Pass by argument
 
+    std::cout << "u_ref_cmd_ of shape: (" << u_ref_cmd_.rows() << ", " << u_ref_cmd_.cols() << ")" << std::endl;
+
     //map solution to linearmpc_panda::StampedFloat64MultiArray 
-    mpc_sol_msg_.data.data.resize(u_ref_cmd_.size());
     Eigen::Map<Eigen::MatrixXd>(mpc_sol_msg_.data.data.data(), nu_, Nh_) = u_ref_cmd_;
 
     //publish the solution message

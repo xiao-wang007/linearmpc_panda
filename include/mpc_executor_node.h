@@ -29,6 +29,7 @@ private:
     double h_mpc_ {0.04};
     int nu_ {7}; // Number of control inputs
     int Nh_ {4};
+    int Nt_;
 
     //run time parameters 
     drake::trajectories::PiecewisePolynomial<double> u_cmd_spline_;
@@ -36,6 +37,7 @@ private:
     int rows_ {}; // for reconstructing the matrix
     int cols_ {};
     Eigen::MatrixXd u_sol_; // Matrix to hold the MPC solution
-    double t_stamp_ {}; // to hold extracted time of mpc solution message
+    ros::Time t_stamp_ {}; // to hold extracted time of mpc solution message
     double t_now_ {};
+    ros::Time t_init_node_ {};
 };

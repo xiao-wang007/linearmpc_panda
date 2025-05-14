@@ -356,8 +356,7 @@ namespace MyControllers {
 
 	//######################################################################################
 	void LinearMPCProb::Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
-		  														 double t_now)
-	{}
+		  														 double t_now) {}
 	//######################################################################################
 	void LinearMPCProb::Get_solution(Eigen::MatrixXd& output)
 	{
