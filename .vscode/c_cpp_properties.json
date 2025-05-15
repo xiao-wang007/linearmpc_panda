@@ -13,7 +13,7 @@
               .devcontainer/devcontainer.json 
               In my current setting, the $(workspaceFolder) is 
               /home/rosdrake */
-            "compileCommands": "compile_commands.json", 
+            "compileCommands": "/home/rosdrake/catkin_ws/build/compile_commands.json", 
             "defines": [],
             "compilerPath": "/usr/bin/g++",
             "cStandard": "c17",
