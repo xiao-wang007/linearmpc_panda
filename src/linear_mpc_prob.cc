@@ -239,6 +239,8 @@ namespace MyControllers {
 													  const Eigen::VectorXd dudt_up,
 													  const Eigen::VectorXd dudt_low)
 	{
+		std::cout << "[LinearMPCProb] x0: " << x0.transpose() << std::endl;
+
 		/* x_ref, u_ref are of Eigen::Matrix<Autodiff, m, n> */
 		AutoDiffVecXd fi(nx_);
 		auto xi_ad = math::InitializeAutoDiff(x_ref.col(0), nx_+nu_, 0);
@@ -250,7 +252,7 @@ namespace MyControllers {
 		assert((fi_grad.cols() == nx_+nu_ && fi_grad.rows() == nx_) && "f0_grad dim is wrong!"); 
 
 		auto A0 = fi_grad.block(0, 0, nx_, nx_);
-		std::cout << "A0: " << A0 << std::endl;
+		//std::cout << "A0: " << A0 << std::endl;
 		auto B0 = fi_grad.block(0, nx_, nx_, nu_);
 		C_.block(0, 0, nx_, nu_) = B0;
 
