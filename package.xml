@@ -4,7 +4,7 @@
   <version>0.0.0</version>
   <description>An inverse dynamics controller package for the Franka_Emika Panda robot</description>
 
-  <maintainer email="scsdr@leeds.ac.uk">david</maintainer>
+  <maintainer email="x.wang16@leeds.ac.uk">Xiao</maintainer>
 
   <license>MIT</license>
 
