@@ -15,8 +15,8 @@
             Torque PD controller for Franka Panda
         </description> 
     </class>-->
-    <class name="linearmpc_panda/QP_controller"
-           type="linearmpc_panda::QP_controller"
+    <class name="linearmpc_panda/LinearMPCController"
+           type="linearmpc_panda::LinearMPCController"
            base_class_type="controller_interface::ControllerBase">
         <description>
             linear MPC tracking controller for panda that presumes a precomuted

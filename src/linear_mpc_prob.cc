@@ -1,4 +1,5 @@
-#include "linear_mpc_prob.h"
+// #include "linear_mpc_prob.h"
+#include <linearmpc_panda/linear_mpc_prob.h>
 
 namespace MyControllers {
 

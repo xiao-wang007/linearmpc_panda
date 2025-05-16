@@ -8,11 +8,11 @@ project(linearmpc_panda)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-    controller_interface
+#     controller_interface
     franka_hw
-    franka_msgs
-    franka_control
-    franka_gripper
+    franka_msgs 
+    franka_control 
+    franka_gripper # maybe not needed
     hardware_interface
     pluginlib
     roscpp
@@ -142,7 +142,7 @@ target_include_directories(linear_mpc_prob PUBLIC
 #################################################################################################
 # Add myutils
 add_library(myutils
-    src/myutils.cc
+            src/myutils.cc
 )
 target_link_libraries(myutils
     ${catkin_LIBRARIES}
@@ -165,8 +165,7 @@ include_directories(
 )
 
 add_library(linearmpc_panda
-        src/panda_QP_controller.cpp 
-        include/panda_QP_controller.h)
+            src/panda_QP_controller.cpp)
 
 target_link_libraries(linearmpc_panda ${catkin_LIBRARIES} Eigen3::Eigen drake::drake)
 add_dependencies(linearmpc_panda ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)

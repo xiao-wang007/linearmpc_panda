@@ -1,4 +1,5 @@
-#include "mpc_executor_node.h"
+// #include "mpc_executor_node.h"
+#include <linearmpc_panda/mpc_executor_node.h>
 
 //########################################################################################
 MPCExecutorNode::MPCExecutorNode()

@@ -1,4 +1,5 @@
 <launch>
+  <arg name="arm_id" default="panda" />
   <!-- Load controller configuration -->
   <rosparam command="load" 
             file="$(find linearmpc_panda)/config/linearmpc_controller.yaml"/>

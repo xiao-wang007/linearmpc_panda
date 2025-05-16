@@ -1,4 +1,4 @@
-linearmpc_controller: # controller name
+panda_QP_controller: # name of controller instance 
   type: linearmpc_panda/LinearMPCController
   arm_id: $(arg arm_id)
   joint_names:

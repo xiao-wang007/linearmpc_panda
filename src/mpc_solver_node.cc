@@ -1,4 +1,5 @@
-#include "mpc_solver_node.h"
+// #include "mpc_solver_node.h"
+#include <linearmpc_panda/mpc_solver_node.h>
 
 //###############################################################################
 MPCSolverNode::MPCSolverNode() 
