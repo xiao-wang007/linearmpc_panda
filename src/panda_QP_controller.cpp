@@ -25,6 +25,7 @@ namespace linearmpc_panda {
 
         auto* effort_joint_interface = robot_hw->get<hardware_interface::EffortJointInterface>();
 
+		joint_handles_.clear();
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint1"));
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint2"));
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint3"));
@@ -33,9 +34,9 @@ namespace linearmpc_panda {
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint6"));
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint7"));
 
-		///* Direct access to panda's current state, no need to use a sub, but here in gazebo, I need to do this through ros */
-		////get panda state, topic belongs to franka_gazebo, which operates as 1kHz, then the callback is also called at 1kHz
-		//state_sub_ = node_handle.subscribe("joint_states", 1, &LinearMPCController::joint_state_callback_sim, this);
+		/* Direct access to panda's current state, no need to use a sub, but here in gazebo, I need to do this through ros */
+		//get panda state, topic belongs to franka_gazebo, which operates as 1kHz, then the callback is also called at 1kHz
+		//state_sub_ = node_handle.subscribe<sensor_msgs::JointState>("joint_states", 1, &LinearMPCController::joint_state_callback_sim, this);
 
 		// Create a publisher for the Panda hardware state
 		//state_pub_ = node_handle.advertise<sensor_msgs::JointState>("joint_state_pandaHW", 1);
@@ -46,7 +47,8 @@ namespace linearmpc_panda {
 		//Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> u_now_(robot_state_.tau_J.data());
 
 		//get upsampled solution trajectory, at hardware frequency 1kHz 
-		executor_sub_ = node_handle.subscribe("upsampled_sol_traj", 1, &LinearMPCController::executor_callback, this);
+		executor_sub_ = node_handle.subscribe("/upsampled_sol_traj", 1, &LinearMPCController::executor_callback, this);
+		u_cmd_ = Eigen::VectorXd::Zero(NUM_JOINTS);
 
 		////create a publisher to send the mpc solution to the executor
 		//mpc_sol_pub_ = node_handle.advertise<std_msgs::Float64MultiArray>("mpc_solution", 1);
@@ -98,6 +100,7 @@ namespace linearmpc_panda {
 											 //data_proc_.x_ref_spline, 
 											 //data_proc_.u_ref_spline); 
 
+		ROS_INFO("\n Linear MPC Controller initialized successfully. xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \n");
         return true;
     }
 
@@ -115,29 +118,47 @@ namespace linearmpc_panda {
 		{
 			//go_to_init_pose(xref_now_.col(0));
 		}
+
+		std::cout << '\n' << std::endl;
+		ROS_INFO("checking if initial pose is ok inside starting() \n");
+
     }
 
 	//#######################################################################################
     void LinearMPCController::update(const ros::Time& time, const ros::Duration& period) 
 	{
-		joint_state_msg_.header.stamp = ros::Time::now();
+		// joint_state_msg_copy_ = latest_joint_state_msg_;
+		// joint_state_msg_copy_.header.stamp = ros::Time::now();
+
+		robot_state_ = state_handle_->getRobotState();
+		q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.q.data());
+		v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.dq.data());
+		u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.tau_J.data());
 
 		// Populate the message with the current joint positions and velocities
-		joint_state_msg_.position.assign(q_now_.data(), q_now_.data() + q_now_.size());
-		joint_state_msg_.velocity.assign(v_now_.data(), v_now_.data() + v_now_.size());
+		//joint_state_msg_copy_.position.assign(q_now_.data(), q_now_.data() + q_now_.size());
+		//joint_state_msg_copy_.velocity.assign(v_now_.data(), v_now_.data() + v_now_.size());
 		// Optionally include effort data if available
 		// joint_state_msg.effort.assign(u_now_.data(), u_now_.data() + u_now_.size());
 
+		std::cout << '\n' << std::endl;
+		std::cout << "q_now_: " << q_now_.transpose() << std::endl;
+		std::cout << "u_now_: " << u_now_.transpose() << std::endl;
+		ROS_INFO("checking inside update(), 1 \n");
+
 		// OBSOLETE------OUT: Publish pandaHW's current state
 		/* conditional, as my mpc_solver_node can sub to gazebo. Needed here as it is separate node */
-		//if (!do_sim_) state_pub_.publish(joint_state_msg_);
+		//if (!do_sim_) state_pub_.publish(joint_state_msg_copy_);
 
 		/* panda hardware also publishes a joint states, so just sub to it */
 		
 
 		// IN: set the torques to the robot, obtained from mpc_solver_node
 		for (size_t i = 0; i < NUM_JOINTS; i++) {
+			ROS_INFO("checking inside update(), 2, in the for loop \n");
+			std::cout << "u_cmd_: " << u_cmd_.transpose() << std::endl;
 			joint_handles_[i].setCommand(u_cmd_[i]); //u_cmd_ is from the sub
+			ROS_INFO("checking inside update(), 3, in the for loop \n");
 		}
 
 		////get current reference trajectory 
@@ -273,8 +294,12 @@ namespace linearmpc_panda {
 	{
 		//store current state
 		// get the current joint position and velocity
-		q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->position.data());
-		v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->velocity.data());
+		std::cout << '\n' << std::endl;
+		ROS_INFO("checking inside joint_state_callback_sim(), 1 \n");
+		std::lock_guard<std::mutex> lock(joint_state_mutex_);
+		latest_joint_state_msg_ = *msg;
+		//q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->position.data());
+		//v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->velocity.data());
 		//u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->effort.data());
 	}
 
@@ -287,6 +312,8 @@ namespace linearmpc_panda {
 	//#######################################################################################
 	void LinearMPCController::executor_callback(const std_msgs::Float64MultiArray::ConstPtr& dim7_vec_msg) 
 	{
+		
+		ROS_INFO("checking inside executor_callback(), 1 &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n");
 		//get the upsampled solution
 		if (dim7_vec_msg->data.size() == 0)
 		{
