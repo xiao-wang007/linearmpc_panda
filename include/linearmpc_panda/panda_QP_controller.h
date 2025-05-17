@@ -14,6 +14,7 @@
 #include <ros/publisher.h>
 #include <ros/time.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/Time.h>
 #include <Eigen/Core>
 
 // from my linermpc in drake c++
@@ -85,18 +86,26 @@ namespace linearmpc_panda {
     private:
         /* TODO: make the matrix or vector size explicit where possible! Some are dependent on 
                  MPC loop parameters, find a way to fix its size accordingly in the constructor */
-        ros::Subscriber state_sub_;
         ros::Subscriber executor_sub_; // sub to set u_cmd at 1kHz
-        //ros::Publisher state_pub_; // pub to panda state for mpc solve
+        ros::Publisher mpc_t_start_pub_;
             
+        std::unique_ptr <franka_hw::FrankaModelHandle> model_handle_;
+        std::unique_ptr <franka_hw::FrankaStateHandle> state_handle_;
+        std::vector<hardware_interface::JointHandle> joint_handles_;
 
+        Eigen::Matrix<double, NUM_JOINTS, 1> q_now_ {};
+        Eigen::Matrix<double, NUM_JOINTS, 1> v_now_ {};
+        Eigen::Matrix<double, NUM_JOINTS, 1> u_now_ {};
+
+        std::mutex joint_state_mutex_;
+        franka::RobotState robot_state_ {};
+        Eigen::VectorXd u_cmd_ {};
+        std_msgs::Time mpc_t_start_msg_ {};
+
+        // ros::Subscriber state_sub_;
         //ros::Publisher mpc_sol_pub_;
         //std_msgs::Float64MultiArray mpc_sol_msg_;
 
-        std::unique_ptr <franka_hw::FrankaModelHandle> model_handle_;
-        std::unique_ptr <franka_hw::FrankaStateHandle> state_handle_;
-
-        std::vector<hardware_interface::JointHandle> joint_handles_;
 
 		////drake::systems::DiscreteStateIndex state_index_;
         //std::string panda_file_ {"/home/rosdrake/panda_arm.urdf"};
@@ -120,9 +129,6 @@ namespace linearmpc_panda {
 		//Eigen::VectorXd udot_low_ {-udot_up_}; 
         //Eigen::MatrixXd xref_now_ {};
         //Eigen::MatrixXd uref_now_ {};
-        Eigen::Matrix<double, NUM_JOINTS, 1> q_now_ {};
-        Eigen::Matrix<double, NUM_JOINTS, 1> v_now_ {};
-        Eigen::Matrix<double, NUM_JOINTS, 1> u_now_ {};
 
         ////member variables related to the reference traj
         //int N_ = 60;
@@ -167,19 +173,18 @@ namespace linearmpc_panda {
 		//Eigen::VectorXd ub_ {};
 
         //memeber variables used in runtime
-        double t_now_ {};
+        // double t_now_ {};
         // franka::RobotState latest_robot_state_ {};
         // franka::RobotState robot_state_copy_ {};
-        sensor_msgs::JointState latest_joint_state_msg_ {};
-        sensor_msgs::JointState joint_state_msg_copy_ {};
+        // sensor_msgs::JointState latest_joint_state_msg_ {};
+        // sensor_msgs::JointState joint_state_msg_copy_ {};
 
-        std::mutex joint_state_mutex_;
-        franka::RobotState robot_state_ {};
-        Eigen::VectorXd state_now_ {};
-        Eigen::VectorXd u_cmd_ {};
+        // Eigen::VectorXd state_now_ {};
 
         //flag
-        bool do_sim_ {true};
+        // bool do_sim_ {true};
 
     };
 } // namespace linearmpc_panda
+
+//xo =  0.770901  0.396021 -0.812618  -2.17939  0.663888   2.34041      -0.5

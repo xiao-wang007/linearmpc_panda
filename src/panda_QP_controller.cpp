@@ -48,6 +48,12 @@ namespace linearmpc_panda {
 
 		//get upsampled solution trajectory, at hardware frequency 1kHz 
 		executor_sub_ = node_handle.subscribe("/upsampled_sol_traj", 1, &LinearMPCController::executor_callback, this);
+		mpc_t_start_pub_ = node_handle.advertise<std_msgs::Time>("/mpc_t_start", 1, true); //True for latched publisher
+
+		mpc_t_start_msg_.data = ros::Time::now();
+		mpc_t_start_pub_.publish(mpc_t_start_msg_);
+		ROS_INFO_STREAM("Published latched /mpc_t_start = " << mpc_t_start_msg_.data.toSec());
+
 		u_cmd_ = Eigen::VectorXd::Zero(NUM_JOINTS);
 
 		////create a publisher to send the mpc solution to the executor
@@ -141,10 +147,10 @@ namespace linearmpc_panda {
 		// Optionally include effort data if available
 		// joint_state_msg.effort.assign(u_now_.data(), u_now_.data() + u_now_.size());
 
-		std::cout << '\n' << std::endl;
-		std::cout << "q_now_: " << q_now_.transpose() << std::endl;
-		std::cout << "u_now_: " << u_now_.transpose() << std::endl;
-		ROS_INFO("checking inside update(), 1 \n");
+		// std::cout << '\n' << std::endl;
+		// std::cout << "q_now_: " << q_now_.transpose() << std::endl;
+		// std::cout << "u_now_: " << u_now_.transpose() << std::endl;
+		// ROS_INFO("checking inside update(), 1 \n");
 
 		// OBSOLETE------OUT: Publish pandaHW's current state
 		/* conditional, as my mpc_solver_node can sub to gazebo. Needed here as it is separate node */
@@ -155,10 +161,10 @@ namespace linearmpc_panda {
 
 		// IN: set the torques to the robot, obtained from mpc_solver_node
 		for (size_t i = 0; i < NUM_JOINTS; i++) {
-			ROS_INFO("checking inside update(), 2, in the for loop \n");
+			// ROS_INFO("checking inside update(), 2, in the for loop \n");
 			std::cout << "u_cmd_: " << u_cmd_.transpose() << std::endl;
 			joint_handles_[i].setCommand(u_cmd_[i]); //u_cmd_ is from the sub
-			ROS_INFO("checking inside update(), 3, in the for loop \n");
+			// ROS_INFO("checking inside update(), 3, in the for loop \n");
 		}
 
 		////get current reference trajectory 
@@ -295,7 +301,6 @@ namespace linearmpc_panda {
 		//store current state
 		// get the current joint position and velocity
 		std::cout << '\n' << std::endl;
-		ROS_INFO("checking inside joint_state_callback_sim(), 1 \n");
 		std::lock_guard<std::mutex> lock(joint_state_mutex_);
 		latest_joint_state_msg_ = *msg;
 		//q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->position.data());
@@ -313,7 +318,7 @@ namespace linearmpc_panda {
 	void LinearMPCController::executor_callback(const std_msgs::Float64MultiArray::ConstPtr& dim7_vec_msg) 
 	{
 		
-		ROS_INFO("checking inside executor_callback(), 1 &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n");
+		// ROS_INFO("checking inside executor_callback(), 1 &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n");
 		//get the upsampled solution
 		if (dim7_vec_msg->data.size() == 0)
 		{

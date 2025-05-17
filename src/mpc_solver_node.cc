@@ -70,6 +70,9 @@ MPCSolverNode::MPCSolverNode()
     state_now_ = Eigen::VectorXd::Zero(nx_);
     u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nh_);
 
+    //print the initial position
+    std::cout << "q0: \n" << data_proc_.x_ref_spline.value(0.).transpose() << std::endl;
+
     t_init_node_ = ros::Time::now();
     ROS_INFO("mpc_solver_node inited! taken %f seconds", (t_init_node_ - t_begin).toSec());
 }
