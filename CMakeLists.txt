@@ -178,30 +178,6 @@ target_include_directories(linearmpc_panda PUBLIC
 install(TARGETS linearmpc_panda
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         )
-#################################################################################################
-# add mpc_ref_updater_node executable
-add_executable(mpc_ref_updater_node 
-               src/mpc_ref_updater_node.cc
-               )
-# link the executable wot the required libraries
-target_link_libraries(mpc_ref_updater_node
-                      ${catkin_LIBRARIES} 
-                      Eigen3::Eigen 
-                      drake::drake
-                #       linear_mpc_prob
-                      myutils)
-
-# add dependencies to ensure proper build order
-add_dependencies(mpc_ref_updater_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
-
-# include the header files
-target_include_directories(mpc_ref_updater_node PUBLIC
-        include
-        external/cnpy
-        )
-# install the executable
-install(TARGETS mpc_ref_updater_node
-        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #################################################################################################
 # add mpc_solver_node executable
