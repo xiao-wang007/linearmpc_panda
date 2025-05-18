@@ -300,9 +300,9 @@ namespace linearmpc_panda {
 	{
 		//store current state
 		// get the current joint position and velocity
-		std::cout << '\n' << std::endl;
-		std::lock_guard<std::mutex> lock(joint_state_mutex_);
-		latest_joint_state_msg_ = *msg;
+		//std::cout << '\n' << std::endl;
+		//std::lock_guard<std::mutex> lock(joint_state_mutex_);
+		//latest_joint_state_msg_ = *msg;
 		//q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->position.data());
 		//v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->velocity.data());
 		//u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->effort.data());

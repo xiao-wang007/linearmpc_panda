@@ -1,7 +1,7 @@
 // #include "linear_mpc_prob.h"
 #include <linearmpc_panda/linear_mpc_prob.h>
 
-namespace MyControllers {
+namespace MPCControllers{
 
 	// constructor
 	LinearMPCProb::LinearMPCProb(const std::string& plant_file,

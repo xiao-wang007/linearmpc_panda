@@ -104,7 +104,7 @@ private:
     PiecewisePolynomial<double> u_ref_spline_;
 
     /* Now I learnt, using unique_ptr avoids DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN assertion */
-    std::unique_ptr<MyControllers::LinearMPCProb> prob_;
+    std::unique_ptr<MPCControllers::LinearMPCProb> prob_;
 
     // run-time member data
     ros::Time t_now_ {};

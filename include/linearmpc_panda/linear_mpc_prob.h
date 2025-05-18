@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Eigen/Dense>
 #include <unsupported/Eigen/KroneckerProduct>
 #include <iostream>
@@ -17,7 +18,7 @@
 #include <drake/math/autodiff.h>
 #include <drake/common/trajectories/piecewise_polynomial.h>
 
-namespace MyControllers{
+namespace MPCControllers{
 	//
 	using drake::multibody::MultibodyPlant;
 	using drake::multibody::Parser;

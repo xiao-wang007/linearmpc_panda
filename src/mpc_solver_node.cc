@@ -62,7 +62,7 @@ MPCSolverNode::MPCSolverNode()
 
     /* have to do this to avoid DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN() assertion as 
         I have a MultibodyPlant() inside LinearMPCProb()*/
-    prob_ = std::make_unique<MyControllers::LinearMPCProb>(panda_file_, integrator_, nx_, nu_, execution_length_, 
+    prob_ = std::make_unique<MPCControllers::LinearMPCProb>(panda_file_, integrator_, nx_, nu_, execution_length_, 
                                                            h_mpc_, h_env_, Nt_, X_W_base_, Q, R, P, 
                                                            data_proc_.x_ref_spline, 
                                                            data_proc_.u_ref_spline); 
