@@ -1,5 +1,6 @@
 #pragma once
 
+#include <controller_manager_msgs/ListControllers.h>
 #include "linear_mpc_prob.h"
 #include <mutex>
 #include <Eigen/Dense>
@@ -68,14 +69,21 @@ namespace MPCControllers
         //
         void joint_state_callback_HW(const sensor_msgs::JointState::ConstPtr& msg);
 
+        //
+        void waitForControllerToBeRunning(const std::string& controller_name); 
+
     private:
         // ROS related member variables
         ros::NodeHandle nh_;
         ros::Timer solver_timer_;
         ros::Publisher mpc_sol_pub_;
+        ros::ServiceClient list_client_;
+
+        // latched publisher for executor node to cover the first bit before the first solution is ready
+        ros::Publisher init_u_ref_pub_; 
+
         ros::Subscriber state_sub_;
         ros::Subscriber mpc_start_time_;
-        ros::Time t_mpc_start_;
         linearmpc_panda::StampedFloat64MultiArray latest_mpc_sol_msg_;
 
         //drake::systems::DiscreteStateIndex state_index_;
@@ -126,9 +134,9 @@ namespace MPCControllers
         Eigen::MatrixXd u_ref_cmd_ {}; // initialize in constructor
 
         // Mutex for thread safety
-        std::mutex mpc_mutex_;
+        std::mutex mpc_t_mutex_;
+        ros::Time t_mpc_start_;
         double current_time_ {}; //w.r.t to mpc start time
-        ros::Time t_now_
     };
 
 } // namespace MPCControllers

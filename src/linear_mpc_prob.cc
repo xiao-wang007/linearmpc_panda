@@ -103,7 +103,7 @@ namespace MPCControllers{
 		std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% here checking1" << std::endl;
 
 		//initialize solver output
-		u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nh_);
+		u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nt_);
 
 		t_init_node_ = ros::Time::now();
 		ROS_INFO("LinearMPCProb inited! %f \n", (ros::Time::now() - t_begin).toSec());
@@ -346,11 +346,14 @@ namespace MPCControllers{
 			return;
 		}	
 
-		assert((u_ref_cmd_.rows() == du_sol_.cols() && u_ref_cmd_.cols() == du_sol_.rows()) 
+		assert((u_ref_cmd_.rows() == du_sol_.cols() && u_ref_cmd_.cols() == (du_sol_.rows()+1)) 
 				&& "u_ref_cmd_ and du_sol_.T dim mismatch!");
 		
 		//u_ref_cmd of shape: (nu_, Nh_)
-		u_ref_cmd_ = u_ref_horizon.block(0, 1, nu_, Nh_) + du_sol_.transpose(); //u_ref_horizon[1:, :]
+		auto temp = u_ref_horizon.block(0, 1, nu_, Nh_);
+		//temp.colwise() += xxx // broadcast over all columns
+		temp += du_sol_;
+		u_ref_cmd_ = temp; 
 		//u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc.tail(Nt_-1), u_ref_cmd);
 
 		std::cout << "[LinearMPCProb] u_ref_cmd_: " << u_ref_cmd_ << std::endl;

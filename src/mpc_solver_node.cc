@@ -6,14 +6,43 @@ namespace MPCControllers
     //###############################################################################
     MPCSolverNode::MPCSolverNode() 
     {
-        //solver_timer_ = nh.createTimer(ros::Duration(0.01), &MPCSolverNode::solve_and_update, this); // 100Hz
-        mpc_sol_pub_ = nh_.advertise<linearmpc_panda::StampedFloat64MultiArray>("mpc_sol", 1);
+		list_client_ = nh_.serviceClient<controller_manager_msgs::ListControllers>("/controller_manager/list_controllers");
 
-        mpc_start_time_ = nh_.subscribe("mpc_t_start", 1, &MPCSolverNode::get_mpc_start_time, this); //True for latched publisher
+        // load x_ref and u_ref
+        data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
+
+        // init latched publisher 
+        init_u_ref_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/init_u_ref", 1, true); //True for latched publisher
+        std_msgs::Float64MultiArray init_u_ref_msg;
+
+
+        init_u_ref_msg.data.resize(nu_ * Nt_);  
+        // map the data into the message
+        auto ts = Eigen::VectorXd::LinSpaced(Nt_, 0., Nh_ * h_mpc_);
+        // std::cout << "data_proc_.u_ref_spline.vector_values(ts): \n" << data_proc_.u_ref_spline.vector_values(ts) << std::endl;
+        Eigen::Map<Eigen::MatrixXd>(init_u_ref_msg.data.data(), nu_, Nt_) = data_proc_.u_ref_spline.vector_values(ts);
+        //std::cout << "init_u_ref_msg.data: " << init_u_ref_msg.data << std::endl;
+
+        init_u_ref_msg.layout.dim.resize(2);
+        init_u_ref_msg.layout.dim[0].label = "rows";
+        init_u_ref_msg.layout.dim[0].size = nu_;
+        init_u_ref_msg.layout.dim[0].stride = nu_ * Nt_; // assuming row-major here
+        init_u_ref_msg.layout.dim[1].label = "cols";
+        init_u_ref_msg.layout.dim[1].size = Nt_;
+        init_u_ref_msg.layout.dim[1].stride = Nt_;
+
+        init_u_ref_pub_.publish(init_u_ref_msg);
+        ROS_INFO("Published latched /init_u_ref inside MPCSolverNode(). \n");
+
+
+        //solver_timer_ = nh.createTimer(ros::Duration(0.01), &MPCSolverNode::solve_and_update, this); // 100Hz
+        mpc_sol_pub_ = nh_.advertise<linearmpc_panda::StampedFloat64MultiArray>("/mpc_sol", 1);
+
+        mpc_start_time_ = nh_.subscribe("/mpc_t_start", 1, &MPCSolverNode::get_mpc_start_time, this); 
 
         /* Direct access to panda's current state, no need to use a sub, but here in gazebo, I need to do this through ros */
         //get panda state, topic belongs to franka_gazebo, which operates as 1kHz, then the callback is also called at 1kHz
-        state_sub_ = nh_.subscribe("joint_states", 1, &MPCSolverNode::joint_state_callback_sim, this);
+        state_sub_ = nh_.subscribe("/joint_states", 1, &MPCSolverNode::joint_state_callback_sim, this);
 
         /*TODO: create the publisher in QPController interface to publish panda hardware current state*/
         //state_sub_ = nh.subscribe("joint_states_pandaHW", 1, &MPCSolverNode::joint_state_callback_HW, this);
@@ -27,15 +56,11 @@ namespace MPCControllers
         latest_mpc_sol_msg_.data.layout.dim.resize(2);
         latest_mpc_sol_msg_.data.layout.dim[0].label = "rows";
         latest_mpc_sol_msg_.data.layout.dim[0].size = nu_;
-        latest_mpc_sol_msg_.data.layout.dim[0].stride = nu_ * Nh_; // assuming row-major here
+        latest_mpc_sol_msg_.data.layout.dim[0].stride = nu_ * Nt_; // assuming row-major here
         latest_mpc_sol_msg_.data.layout.dim[1].label = "cols";
-        latest_mpc_sol_msg_.data.layout.dim[1].size = Nh_;
-        latest_mpc_sol_msg_.data.layout.dim[1].stride = Nh_;
-        latest_mpc_sol_msg_.data.data.resize(nu_ * Nh_);  // Preallocate
-
-
-        // load x_ref and u_ref
-        data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
+        latest_mpc_sol_msg_.data.layout.dim[1].size = Nt_;
+        latest_mpc_sol_msg_.data.layout.dim[1].stride = Nt_;
+        latest_mpc_sol_msg_.data.data.resize(nu_ * Nt_);  // Preallocate
 
         //init MyControllers::LinearMPCProb() here
         X_W_base_ = RigidTransform<double>(RollPitchYaw<double>(Vector3<double>(0., 0., -90.) * PI / 180.),
@@ -65,31 +90,46 @@ namespace MPCControllers
                                                             data_proc_.u_ref_spline); 
         //init solver output
         state_now_ = Eigen::VectorXd::Zero(nx_);
-        u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nh_);
+        u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nt_);
 
         //print the initial position
         std::cout << "q0: \n" << data_proc_.x_ref_spline.value(0.).transpose() << std::endl;
+
+        ROS_INFO("\n MPCSolverNode initialized. $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n");
 
     }
 
     //########################################################################################
     void MPCSolverNode::run() 
     {
+        //
+        waitForControllerToBeRunning("franka_state_controller");
+
+        ROS_INFO("[MPCSolverNode] Waiting for /clock to start...");
+        while (ros::Time::now().toSec() == 0.0 && ros::ok()) 
+        {
+            ros::Duration(0.1).sleep();
+        }
+        ROS_INFO("[MPCSolverNode] Clock started at time: %f", ros::Time::now().toSec());
+
+        //start solver in a separate thread
+        std::thread solver_thread(&MPCSolverNode::solve_publish_and_update, this);
+
         while (ros::ok()) 
         {
-            // Call the solve_and_update function at a fixed rate
             solve_publish_and_update();
 
             // no sleep, event driven
             //ros::Duration(0.01).sleep(); // 100Hz
-        ros::spinOnce();
+
+            ros::spinOnce();
         }
     }
 
     void MPCSolverNode::get_mpc_start_time(const std_msgs::Time::ConstPtr& msg) 
     {
         // Lock the mutex to ensure thread safety
-        std::lock_guard<std::mutex> lock(mpc_mutex_);
+        std::lock_guard<std::mutex> lock(mpc_t_mutex_);
         t_mpc_start_ = msg->data;
         ROS_INFO("mpc_solver_node::get_mpc_start_time() runs once");
     }
@@ -98,7 +138,8 @@ namespace MPCControllers
     void MPCSolverNode::solve_publish_and_update() 
     {
         // Lock the mutex to ensure thread safety
-        std::lock_guard<std::mutex> lock(mpc_mutex_);
+        // I don't really need this as the solution is published straight away
+        //std::lock_guard<std::mutex> lock(mpc_mutex_); 
 
         ////get current reference trajectory for debugging 
         //t_now_ = ros::Time::now();
@@ -111,7 +152,10 @@ namespace MPCControllers
 
         //call the mpc solver
         state_now_ << q_now_, v_now_; // these are updated in the subcription callback
-        t_now_ = ros::Time::now();
+        std::cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n" << std::endl;
+        std::cout << "[MPCSolverNode] state_now_: \n" << state_now_.transpose() << std::endl;
+
+        auto t_now_ = ros::Time::now();
         current_time_ = (t_mpc_start_ - t_now_).toSec();
         prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, t_now_);
 
@@ -153,6 +197,32 @@ namespace MPCControllers
         v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->velocity.data());
         //u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->effort.data());
     }
+
+    //########################################################################################
+	void MPCSolverNode::waitForControllerToBeRunning(const std::string& controller_name) 
+	{
+		ROS_INFO_STREAM("Waiting for controller '" << controller_name << "' to be running...");
+
+		while (ros::ok()) 
+		{
+			controller_manager_msgs::ListControllers srv;
+			if (list_client_.call(srv)) 
+			{
+				for (const auto& controller : srv.response.controller) 
+				{
+					if (controller.name == controller_name && controller.state == "running") 
+					{
+						ROS_INFO_STREAM("Controller '" << controller_name << "' is running.");
+						return;
+					}
+				}
+			} else {
+				ROS_WARN_THROTTLE(5.0, "Could not call /controller_manager/list_controllers yet...");
+			}
+
+			ros::Duration(0.5).sleep();
+		}
+	}
 
 } // namespace MPCControllers
 
