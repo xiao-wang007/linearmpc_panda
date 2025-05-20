@@ -312,9 +312,6 @@ namespace MPCControllers{
 		auto x_ref_horizon = x_ref_spline_.vector_values(ts_mpc);
 		auto u_ref_horizon = u_ref_spline_.vector_values(ts_mpc);
 
-		//std::cout << "[LinearMPCProb] x_ref_horizon: " << x_ref_horizon.transpose() << std::endl;
-		//std::cout << "[LinearMPCProb] u_ref_horizon: " << u_ref_horizon.transpose() << std::endl;
-
 		assert(x_ref_horizon.cols() == Nt_ && "x_ref_horizon dim is wrong!");
 		assert(u_ref_horizon.cols() == Nt_ && "u_ref_horizon dim is wrong!");
 
@@ -349,21 +346,14 @@ namespace MPCControllers{
 		assert((u_ref_cmd_.rows() == du_sol_.cols() && u_ref_cmd_.cols() == (du_sol_.rows()+1)) 
 				&& "u_ref_cmd_ and du_sol_.T dim mismatch!");
 		
+		u_ref_cmd_.col(0) = u_ref_horizon.col(0);
 		//u_ref_cmd of shape: (nu_, Nh_)
 		auto temp = u_ref_horizon.block(0, 1, nu_, Nh_);
 		//temp.colwise() += xxx // broadcast over all columns
 		temp += du_sol_.transpose();
 		u_ref_cmd_.block(0, 1, nu_, Nh_) = temp; 
-		//u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc.tail(Nt_-1), u_ref_cmd);
 
-		std::cout << "[LinearMPCProb] u_ref_cmd_: " << u_ref_cmd_ << std::endl;
-		
-		////map solution to std_msgs::Float64MultiArray 
-		//mpc_sol_msg_.data.resize(u_ref_cmd.size());
-		//Eigen::Map<Eigen::MatrixXd>(mpc_sol_msg_.data.data(), nu_, Nh_) = u_ref_cmd_;
-
-		////publish the solution message
-		//mpc_sol_pub_.publish(mpc_sol_msg_);
+		std::cout << "[LinearMPCProb]_Solve_and_update_C_d_for_solver_errCoord1 u_ref_cmd_: \n" << u_ref_cmd_ << std::endl;
 	}
 
 	//######################################################################################
@@ -413,6 +403,7 @@ namespace MPCControllers{
 				&& "u_ref_cmd_ and du_sol_.T dim mismatch!");
 		
 		//u_ref_cmd of shape: (nu_, Nh_)
+		u_ref_cmd_.col(0) = u_ref_horizon.col(0);
 		auto temp = u_ref_horizon.block(0, 1, nu_, Nh_);
 		//temp.colwise() += xxx // broadcast over all columns
 		std::cout << "temp.shape: " << temp.rows() << " x " << temp.cols() << std::endl;
@@ -422,7 +413,7 @@ namespace MPCControllers{
 		u_ref_cmd_.block(0, 1, nu_, Nh_) = temp; 
 		//u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc.tail(Nt_-1), u_ref_cmd);
 
-		std::cout << "[LinearMPCProb] u_ref_cmd_: " << u_ref_cmd_ << std::endl;
+		std::cout << "[LinearMPCProb]_Solve_and_update_C_d_for_solver_errCoord2 u_ref_cmd_: \n" << u_ref_cmd_ << std::endl;
 	}
 	//######################################################################################
 	void LinearMPCProb::Get_solution(Eigen::MatrixXd& output)

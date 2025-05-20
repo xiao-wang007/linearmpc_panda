@@ -177,8 +177,8 @@ namespace MPCControllers
         //save solution to member variable u_ref_cmd_
         prob_->Get_solution(u_ref_cmd_); //Pass by argument
 
-        std::cout << "u_ref_cmd_ of shape: (" << u_ref_cmd_.rows() << ", " << u_ref_cmd_.cols() << ")" << std::endl;
-        std::cout << "u_ref_cmd_: \n" << u_ref_cmd_ << std::endl;
+        // std::cout << "u_ref_cmd_ of shape: (" << u_ref_cmd_.rows() << ", " << u_ref_cmd_.cols() << ")" << std::endl;
+        // std::cout << "u_ref_cmd_: \n" << u_ref_cmd_ << std::endl;
 
         //map solution to linearmpc_panda::StampedFloat64MultiArray 
 
