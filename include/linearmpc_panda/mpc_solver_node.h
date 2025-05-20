@@ -11,6 +11,7 @@
 #include <std_msgs/Time.h>
 #include <thread>
 #include <atomic>
+#include <chrono>
 
 namespace MPCControllers
 {
@@ -131,11 +132,14 @@ namespace MPCControllers
         //Eigen::VectorXd state_now_ {}; bad practic without initialization as size is not know, can't do << q_now_, v_now_ without resizing
         //Eigen::Matrix<double, NUM_JOINTS*2, 1> state_now_ {};  have to use macros since I cannot use nu_ here
         Eigen::VectorXd state_now_ {}; // initialize in constructor
+        std::mutex state_mutex_;
         Eigen::MatrixXd u_ref_cmd_ {}; // initialize in constructor
 
         // Mutex for thread safety
         std::mutex mpc_t_mutex_;
         ros::Time t_mpc_start_;
+        ros::Time t_mpc_start_here_;
+        std::chrono::time_point<std::chrono::high_resolution_clock> t_start_node_ {};
         double current_time_ {}; //w.r.t to mpc start time
     };
 

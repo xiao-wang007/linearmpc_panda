@@ -141,9 +141,9 @@ namespace linearmpc_panda {
 		std::cout << '\n' << std::endl;
 		ROS_INFO("checking if initial pose is ok inside starting() \n");
 
-		// press enter to continue
-		std::cout << "Press Enter to start MPC controller..." << std::endl;
-		std::cin.get();
+		// // press enter to continue
+		// std::cout << "Press Enter to start MPC controller..." << std::endl;
+		// std::cin.get();
 
     }
 

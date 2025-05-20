@@ -100,6 +100,9 @@ namespace MPCControllers
     //########################################################################################
     void MPCExecutorNode::run() 
     {
+        //
+        // waitForControllerToBeRunning("franka_state_controller");
+
         ROS_INFO("[MPCExecutorNode] Waiting for /clock to start...");
         while (ros::Time::now().toSec() == 0.0 && ros::ok()) 
         {
@@ -147,7 +150,7 @@ namespace MPCControllers
     //########################################################################################
 	void MPCExecutorNode::waitForControllerToBeRunning(const std::string& controller_name) 
 	{
-		ROS_INFO_STREAM("Waiting for controller '" << controller_name << "' to be running...");
+		ROS_INFO_STREAM("Waiting inside [MPCExecutorNode] for controller '" << controller_name << "' to be running...xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
 		while (ros::ok()) 
 		{

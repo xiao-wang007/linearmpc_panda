@@ -103,7 +103,9 @@ namespace MPCControllers
     void MPCSolverNode::run() 
     {
         //
-        waitForControllerToBeRunning("franka_state_controller");
+        //waitForControllerToBeRunning("franka_state_controller");
+
+        t_start_node_ = std::chrono::high_resolution_clock::now();
 
         ROS_INFO("[MPCSolverNode] Waiting for /clock to start...");
         while (ros::Time::now().toSec() == 0.0 && ros::ok()) 
@@ -113,17 +115,25 @@ namespace MPCControllers
         ROS_INFO("[MPCSolverNode] Clock started at time: %f", ros::Time::now().toSec());
 
         //start solver in a separate thread
-        std::thread solver_thread(&MPCSolverNode::solve_publish_and_update, this);
+        std::thread solver_thread (
+            [this]()
+                {
+                    while (ros::ok()) 
+                    {
+                        solve_publish_and_update();
+                        // optional sleep to control the rate of the solver
+                        //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                        //ros::Duration(0.01).sleep();
+                    }
+                }
+        );
 
-        while (ros::ok()) 
-        {
-            solve_publish_and_update();
+        ros::spin();
 
-            // no sleep, event driven
-            //ros::Duration(0.01).sleep(); // 100Hz
+        // ros::spin() blocks this, then prints when ros is shutdown
+        std::cout << "done spin() in MPCSolverNode::run()." << std::endl;
 
-            ros::spinOnce();
-        }
+        solver_thread.join(); // Wait for the solver thread to finish
     }
 
     void MPCSolverNode::get_mpc_start_time(const std_msgs::Time::ConstPtr& msg) 
@@ -138,26 +148,27 @@ namespace MPCControllers
     void MPCSolverNode::solve_publish_and_update() 
     {
         // Lock the mutex to ensure thread safety
-        // I don't really need this as the solution is published straight away
-        //std::lock_guard<std::mutex> lock(mpc_mutex_); 
-
-        ////get current reference trajectory for debugging 
-        //t_now_ = ros::Time::now();
-        //auto t_start = (t_now_-t_init_node_).toSec();
-        //auto ts_ = Eigen::VectorXd::LinSpaced(Nt_, t_start, t_start+mpc_horizon_);
-        //xref_now_ = data_proc_.x_ref_spline.vector_values(ts_);
-        //uref_now_ = data_proc_.u_ref_spline.vector_values(ts_);
-
-        //std::cout << "uref_now_: \n" << uref_now_ << std::endl;
+        Eigen::VectorXd local_q_now_, local_v_now_;
+        {
+            std::lock_guard<std::mutex> lock(state_mutex_);
+            local_q_now_ = q_now_;
+            local_v_now_ = v_now_;
+        } // lock release when go out of this scope
 
         //call the mpc solver
-        state_now_ << q_now_, v_now_; // these are updated in the subcription callback
+        state_now_ << local_q_now_, local_v_now_; // these are updated in the subcription callback
         std::cout << "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n" << std::endl;
         std::cout << "[MPCSolverNode] state_now_: \n" << state_now_.transpose() << std::endl;
 
         auto t_now_ = ros::Time::now();
-        current_time_ = (t_mpc_start_ - t_now_).toSec();
-        prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, t_now_);
+        auto t_now_chro = std::chrono::high_resolution_clock::now();
+        // current_time_ = (t_now_ - t_mpc_start_).toSec();
+        current_time_ = std::chrono::duration_cast<std::chrono::duration<double>>(t_now_chro - t_start_node_).count();
+        std::cout << "t_mpc_start_: " << t_mpc_start_<< std::endl;
+        // std::cout << "t_now_: " << t_now_ << std::endl;
+        std::cout << "time-elipsed since node started: " << current_time_ << std::endl;
+        //std::cout << "t_now_: " << t_now_ << std::endl;
+        prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, current_time_);
 
         //get time here for stamping the message
         latest_mpc_sol_msg_.header.stamp = ros::Time::now();
@@ -170,7 +181,8 @@ namespace MPCControllers
         std::cout << "u_ref_cmd_: \n" << u_ref_cmd_ << std::endl;
 
         //map solution to linearmpc_panda::StampedFloat64MultiArray 
-        Eigen::Map<Eigen::MatrixXd>(latest_mpc_sol_msg_.data.data.data(), nu_, Nh_) = u_ref_cmd_;
+
+        Eigen::Map<Eigen::MatrixXd>(latest_mpc_sol_msg_.data.data.data(), nu_, Nt_) = u_ref_cmd_;
 
         //publish the solution message
         mpc_sol_pub_.publish(latest_mpc_sol_msg_);
@@ -183,8 +195,11 @@ namespace MPCControllers
     {
         //store current state
         // get the current joint position and velocity
+        // std::cout << "Checking inside joint_state_callback_sim() **********************************************" << std::endl;
         q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->position.data());
+        // std::cout << "q_now_: \n" << q_now_.transpose() << std::endl;
         v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->velocity.data());
+        // std::cout << "v_now_: \n" << v_now_.transpose() << std::endl;
         //u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->effort.data());
     }
 
@@ -193,6 +208,7 @@ namespace MPCControllers
     {
         //store current state
         // get the current joint position and velocity
+        std::mutex state_mutex_;
         q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->position.data());
         v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->velocity.data());
         //u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->effort.data());
@@ -201,7 +217,7 @@ namespace MPCControllers
     //########################################################################################
 	void MPCSolverNode::waitForControllerToBeRunning(const std::string& controller_name) 
 	{
-		ROS_INFO_STREAM("Waiting for controller '" << controller_name << "' to be running...");
+		ROS_INFO_STREAM("Waiting inside [MPCSolverNode] for controller '" << controller_name << "' to be running...xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
 		while (ros::ok()) 
 		{
