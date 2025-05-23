@@ -241,6 +241,7 @@ namespace MPCControllers{
 													  const Eigen::VectorXd dudt_low)
 	{
 		std::cout << "[LinearMPCProb] x0: " << x0.transpose() << std::endl;
+		// std::cout << "[LinearMPCProb] u0: " << u_ref.col(0).transpose() << std::endl;
 
 		/* x_ref, u_ref are of Eigen::Matrix<Autodiff, m, n> */
 		AutoDiffVecXd fi(nx_);
@@ -367,6 +368,8 @@ namespace MPCControllers{
 
 		//std::cout << "[LinearMPCProb] x_ref_horizon: " << x_ref_horizon.transpose() << std::endl;
 		//std::cout << "[LinearMPCProb] u_ref_horizon: " << u_ref_horizon.transpose() << std::endl;
+		std::cout << "[LinearMPCProb] x_ref_horizon at end point: \n" << x_ref_horizon.col(x_ref_horizon.cols()-1).transpose() << std::endl;
+		std::cout << "[LinearMPCProb] u_ref_horizon at end point: \n" << u_ref_horizon.col(u_ref_horizon.cols()-1).transpose() << std::endl;
 
 		assert(x_ref_horizon.cols() == Nt_ && "x_ref_horizon dim is wrong!");
 		assert(u_ref_horizon.cols() == Nt_ && "u_ref_horizon dim is wrong!");
@@ -386,7 +389,7 @@ namespace MPCControllers{
 			dx_sol_ = result_.GetSolution(dx_vars_);
 			du_sol_ = result_.GetSolution(du_vars_);
 			//std::cout << "x_sol: " << x_sol.transpose() << std::endl;
-			std::cout << "[LinearMPCProb] du_sol_: " << du_sol_ << std::endl;
+			std::cout << "[LinearMPCProb] du_sol_: \n" << du_sol_ << std::endl;
 		} else {
 			std::cout << "Solver failed!" << std::endl;
 			std::cout << "Constraint violations: " << std::endl;

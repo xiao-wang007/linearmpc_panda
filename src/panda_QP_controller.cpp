@@ -54,56 +54,6 @@ namespace linearmpc_panda {
 
 		u_cmd_ = Eigen::VectorXd::Zero(NUM_JOINTS);
 
-		////create a publisher to send the mpc solution to the executor
-		//mpc_sol_pub_ = node_handle.advertise<std_msgs::Float64MultiArray>("mpc_solution", 1);
-
-		////define the meta data of a std_msgs::Float64MultiArray for mpc_solution
-		//mpc_sol_msg_.layout.dim.resize(2);
-		//mpc_sol_msg_.layout.dim[0].label = "rows";
-		//mpc_sol_msg_.layout.dim[0].size = nu_;
-		//mpc_sol_msg_.layout.dim[0].stride = nu_ * Nh_; // assuming row-major here
-		//mpc_sol_msg_.layout.dim[1].label = "cols";
-		//mpc_sol_msg_.layout.dim[1].size = Nh_;
-		//mpc_sol_msg_.layout.dim[1].stride = Nh_;
-		//mpc_sol_msg_.data.resize(nu_ * Nh_);  // Preallocate
-
-		//// compute mpc related parameters, this has to go first as init_prog() uses them
-		//Nh_ = Nt_ - 1;
-		//execution_length_ = h_mpc_ * n_exe_steps_;
-		//mpc_horizon_ = h_mpc_ * Nh_;
-
-        //// load x_ref and u_ref
-		//data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
-
-		////init MyControllers::LinearMPCProb() here
-		//integrator_ = "RK4";
-        //X_W_base_ = RigidTransform<double>(RollPitchYaw<double>(Vector3<double>(0., 0., -90.) * PI / 180.),
-                                      //Vector3<double>(0., -0.2, 0.));
-
-		////make Q
-		//Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
-		//Eigen::VectorXd v_coef = Eigen::VectorXd::Constant(nu_, 1.) * 0.1;
-		//Eigen::VectorXd Q_diags(q_coef.rows() + v_coef.rows());
-		//Q_diags.head(q_coef.rows()) = q_coef;
-		//Q_diags.tail(v_coef.rows()) = v_coef;
-		//Eigen::DiagonalMatrix<double, NUM_JOINTS*2> Q_sparse = Q_diags.asDiagonal();
-		//Eigen::MatrixXd Q = Q_sparse.toDenseMatrix();
-
-		////make R
-		//Eigen::VectorXd u_coef = Eigen::VectorXd::Constant(nu_, 0.001);
-		//Eigen::MatrixXd R = u_coef.asDiagonal();
-
-		////make P
-		//Eigen::MatrixXd P = Eigen::MatrixXd::Identity(nx_, nx_) * 100;
-
-
-		///* have to do this to avoid DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN() assertion as 
-		   //I have a MultibodyPlant() inside LinearMPCProb()*/
-		//prob_ = std::make_unique<MyControllers::LinearMPCProb>(panda_file_, integrator_, nx_, nu_, execution_length_, 
-											 //h_mpc_, h_env_, Nt_, X_W_base_, Q, R, P, 
-											 //data_proc_.x_ref_spline, 
-											 //data_proc_.u_ref_spline); 
-
 		ROS_INFO("\n Linear MPC Controller initialized successfully. xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \n");
         return true;
     }

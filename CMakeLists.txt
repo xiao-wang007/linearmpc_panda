@@ -232,6 +232,32 @@ install(TARGETS mpc_executor_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #################################################################################################
+# Add fake_state_publisher executable
+add_executable(fake_state_publisher
+               src/fake_state_publisher.cc
+               )
+
+# Link the executable to the required libraries
+target_link_libraries(fake_state_publisher
+                      ${catkin_LIBRARIES} 
+                      Eigen3::Eigen 
+                      drake::drake
+                      linear_mpc_prob
+                      myutils)
+
+# Add dependencies to ensure proper build order
+add_dependencies(fake_state_publisher ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+
+# Include the header files
+target_include_directories(fake_state_publisher PUBLIC
+        include
+        external/cnpy
+        )
+
+# Install the executable
+install(TARGETS fake_state_publisher
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+#################################################################################################
 install(FILES controller_plugins.xml
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
         )

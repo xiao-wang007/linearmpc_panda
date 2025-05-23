@@ -150,12 +150,20 @@ void VisualizeMatSparsity(const Eigen::MatrixXd& mat)
 }
 
 
+//####################################################################################################
+void BuildArmOnlyPlant(std::unique_ptr<MultibodyPlant<double>>& plant_ptr, 
+					   const std::string& urdf_file,
+					   drake::math::RigidTransform<double>& X_W_base)
+{
+	//auto X_W_base = RigidTransform<double>(RollPitchYaw<double>(Vector3<double>(0., 0., -90.) * PI / 180.),
+                                      //Vector3<double>(0., -0.2, 0.));
+	auto plant_ptr_ = std::make_unique<MultibodyPlant<double>>(plant_ptr->time_step());
+	Parser parser(plant_ptr_.get());
+	parser.AddModelsFromUrl(urdf_file);
+	const auto& arm_base_frame = plant_ptr_->GetFrameByName("panda_link0");
+	plant_ptr_->WeldFrames(plant_ptr_->world_frame(), arm_base_frame, X_W_base);
+	plant_ptr_->Finalize();
 
-
-
-
-
-
-
-
+	plant_ptr = std::move(plant_ptr_);
+}
 }

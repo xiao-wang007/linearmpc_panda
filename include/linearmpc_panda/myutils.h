@@ -9,11 +9,16 @@
 #include <drake/common/trajectories/piecewise_polynomial.h>
 #include "cnpy.h"
 
+#include <drake/multibody/parsing/parser.h>
+#include <drake/multibody/plant/multibody_plant.h>
+
 
 namespace MyUtils {
 	//
 	using drake::trajectories::PiecewisePolynomial;
 	using drake::AutoDiffXd;
+	using drake::multibody::MultibodyPlant;
+	using drake::multibody::Parser;
 
 	//
 	using ProcessedTrajMapToMat = std::unordered_map<std::string, Eigen::MatrixXd>;
@@ -83,6 +88,11 @@ namespace MyUtils {
 
 	//
 	void VisualizeMatSparsity(const Eigen::MatrixXd& mat);
+
+	//
+	void BuildArmOnlyPlant(std::unique_ptr<MultibodyPlant<double>>& plant_ptr);
+
+	
 
 }
 
