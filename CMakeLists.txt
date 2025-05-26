@@ -162,6 +162,7 @@ add_subdirectory(external/cnpy) # needed by myutils
 #################################################################################################
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  src/linearmpc_panda
 )
 
 add_library(linearmpc_panda
