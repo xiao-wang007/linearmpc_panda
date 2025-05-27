@@ -56,7 +56,8 @@ namespace linearmpc_panda {
     class LinearMPCController: public controller_interface::MultiInterfaceController<
             franka_hw::FrankaModelInterface,
             franka_hw::FrankaStateInterface,
-            hardware_interface::EffortJointInterface> {
+            hardware_interface::EffortJointInterface> 
+{
     public:
         /* I should initialize my prog, ref_trajs, etc*/
         bool init(hardware_interface::RobotHW* robot_hw, ros::NodeHandle& node_handle) override;

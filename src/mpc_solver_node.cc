@@ -6,39 +6,17 @@ namespace MPCControllers
     //###############################################################################
     MPCSolverNode::MPCSolverNode() 
     {
-		list_client_ = nh_.serviceClient<controller_manager_msgs::ListControllers>("/controller_manager/list_controllers");
+
+        nh_.param<bool>("publish_ready_signal", publish_ready_signal_, false);
+        ROS_INFO("publish_ready_signal in MPCSolverNode");
 
         // load x_ref and u_ref
         data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
 
-        // init latched publisher 
-        init_u_ref_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/init_u_ref", 1, true); //True for latched publisher
-        std_msgs::Float64MultiArray init_u_ref_msg;
-
-
-        init_u_ref_msg.data.resize(nu_ * Nt_);  
-        // map the data into the message
-        auto ts = Eigen::VectorXd::LinSpaced(Nt_, 0., Nh_ * h_mpc_);
-        // std::cout << "data_proc_.u_ref_spline.vector_values(ts): \n" << data_proc_.u_ref_spline.vector_values(ts) << std::endl;
-        Eigen::Map<Eigen::MatrixXd>(init_u_ref_msg.data.data(), nu_, Nt_) = data_proc_.u_ref_spline.vector_values(ts);
-        //std::cout << "init_u_ref_msg.data: " << init_u_ref_msg.data << std::endl;
-
-        init_u_ref_msg.layout.dim.resize(2);
-        init_u_ref_msg.layout.dim[0].label = "rows";
-        init_u_ref_msg.layout.dim[0].size = nu_;
-        init_u_ref_msg.layout.dim[0].stride = nu_ * Nt_; // assuming row-major here
-        init_u_ref_msg.layout.dim[1].label = "cols";
-        init_u_ref_msg.layout.dim[1].size = Nt_;
-        init_u_ref_msg.layout.dim[1].stride = Nt_;
-
-        init_u_ref_pub_.publish(init_u_ref_msg);
-        ROS_INFO("Published latched /init_u_ref inside MPCSolverNode(). \n");
-
-
         //solver_timer_ = nh.createTimer(ros::Duration(0.01), &MPCSolverNode::solve_and_update, this); // 100Hz
-        mpc_sol_pub_ = nh_.advertise<linearmpc_panda::StampedFloat64MultiArray>("/mpc_sol", 1);
+        mpc_sol_pub_ = nh_.advertise<linearmpc_panda::StampedFloat64MultiArray>("/mpc_sol_out", 1);
 
-        mpc_start_time_ = nh_.subscribe("/mpc_t_start", 1, &MPCSolverNode::get_mpc_start_time, this); 
+        // mpc_start_time_ = nh_.subscribe("/mpc_t_start", 1, &MPCSolverNode::get_mpc_start_time, this); 
 
         /* Direct access to panda's current state, no need to use a sub, but here in gazebo, I need to do this through ros */
         //get panda state, topic belongs to franka_gazebo, which operates as 1kHz, then the callback is also called at 1kHz
@@ -95,6 +73,8 @@ namespace MPCControllers
         //print the initial position
         std::cout << "q0: \n" << data_proc_.x_ref_spline.value(0.).transpose() << std::endl;
 
+        t_start_node_ = std::chrono::high_resolution_clock::now();
+        mpc_t_start_ = ros::Time::now(); //get the time when the node is initialized
         ROS_INFO("\n MPCSolverNode initialized. $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n");
 
     }
@@ -105,14 +85,19 @@ namespace MPCControllers
         //
         //waitForControllerToBeRunning("franka_state_controller");
 
-        t_start_node_ = std::chrono::high_resolution_clock::now();
 
-        ROS_INFO("[MPCSolverNode] Waiting for /clock to start...");
-        while (ros::Time::now().toSec() == 0.0 && ros::ok()) 
+        // ROS_INFO("[MPCSolverNode] Waiting for /clock to start...");
+        // while (ros::Time::now().toSec() == 0.0 && ros::ok()) 
+        // {
+        //     ros::Duration(0.1).sleep();
+        // }
+        // ROS_INFO("[MPCSolverNode] Clock started at time: %f", ros::Time::now().toSec());
+
+        if (publish_ready_signal_) 
         {
-            ros::Duration(0.1).sleep();
+            nh_.setParam("/mpc_solver_ready", true);  // Global flag
+            ROS_INFO("MPC Solver is ready!");
         }
-        ROS_INFO("[MPCSolverNode] Clock started at time: %f", ros::Time::now().toSec());
 
         //start solver in a separate thread
         std::thread solver_thread (
@@ -136,13 +121,13 @@ namespace MPCControllers
         solver_thread.join(); // Wait for the solver thread to finish
     }
 
-    void MPCSolverNode::get_mpc_start_time(const std_msgs::Time::ConstPtr& msg) 
-    {
-        // Lock the mutex to ensure thread safety
-        std::lock_guard<std::mutex> lock(mpc_t_mutex_);
-        t_mpc_start_ = msg->data;
-        ROS_INFO("mpc_solver_node::get_mpc_start_time() runs once");
-    }
+    // void MPCSolverNode::get_mpc_start_time(const std_msgs::Time::ConstPtr& msg) 
+    // {
+    //     // Lock the mutex to ensure thread safety
+    //     std::lock_guard<std::mutex> lock(mpc_t_mutex_);
+    //     t_mpc_start_ = msg->data;
+    //     ROS_INFO("mpc_solver_node::get_mpc_start_time() runs once");
+    // }
 
     //########################################################################################
     void MPCSolverNode::solve_publish_and_update() 
@@ -164,7 +149,6 @@ namespace MPCControllers
         auto t_now_chro = std::chrono::high_resolution_clock::now();
         // current_time_ = (t_now_ - t_mpc_start_).toSec();
         current_time_ = std::chrono::duration_cast<std::chrono::duration<double>>(t_now_chro - t_start_node_).count();
-        std::cout << "t_mpc_start_: " << t_mpc_start_<< std::endl;
         // std::cout << "t_now_: " << t_now_ << std::endl;
         std::cout << "time-elipsed since node started: " << current_time_ << std::endl;
         //std::cout << "t_now_: " << t_now_ << std::endl;
@@ -172,7 +156,7 @@ namespace MPCControllers
 
         //get time here for stamping the message
         latest_mpc_sol_msg_.header.stamp = ros::Time::now();
-        latest_mpc_sol_msg_.header.frame_id = "mpc_sol";
+        latest_mpc_sol_msg_.header.frame_id = "mpc_sol_out";
 
         //save solution to member variable u_ref_cmd_
         prob_->Get_solution(u_ref_cmd_); //Pass by argument

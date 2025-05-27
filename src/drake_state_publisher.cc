@@ -13,7 +13,7 @@ DrakeStatePublisherNode::DrakeStatePublisherNode()
 
     // Initialize the publisher
     state_pub_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
-    control_sub_ = nh_.subscribe("/upsampled_u_cmd", 1, &DrakeStatePublisherNode::control_callback, this);
+    control_sub_ = nh_.subscribe("/upsampled_u_cmd_in", 1, &DrakeStatePublisherNode::control_callback, this);
 
     // Initialize the timer
     // timer_ = nh_.createTimer(ros::Duration(1.0 / frequency_), &DrakeStatePublisherNode::publish_state, this);
@@ -28,6 +28,7 @@ void DrakeStatePublisherNode::control_callback(const std_msgs::Float64MultiArray
 {
     std::lock_guard<std::mutex> lock(control_mutex_);
     latest_control_input_ = Eigen::Map<const Eigen::VectorXd>(msg->data.data(), msg->data.size());
+    std::cout << "control input in callback: " << latest_control_input_.transpose() << std::endl;
 }
 
 //################################################################################################################
@@ -88,8 +89,8 @@ void DrakeStatePublisherNode::publish_state()
         *(plant_ptr_), &simulator_->get_mutable_context());
     
     Eigen::VectorXd state = plant_ptr_->GetPositionsAndVelocities(context);
-    std::cout << "Publishing state of size: " << state.size() << std::endl;
-    std::cout << "state: " << state.transpose() << std::endl;
+    // std::cout << "Publishing state of size: " << state.size() << std::endl;
+    // std::cout << "state: " << state.transpose() << std::endl;
 
     sensor_msgs::JointState msg;
     msg.header.stamp = ros::Time::now();
@@ -146,6 +147,7 @@ void DrakeStatePublisherNode::run()
             std::lock_guard<std::mutex> lock(control_mutex_);
             if (latest_control_input_.size() == plant_ptr_->num_actuators()) 
             {
+                std::cout << "Applying control input: " << latest_control_input_.transpose() << std::endl;
                 plant_ptr_->get_actuation_input_port().FixValue(
                     &plant_context, latest_control_input_);
             }
@@ -156,13 +158,11 @@ void DrakeStatePublisherNode::run()
 
         // publish the state
         publish_state();
+        ros::spinOnce(); // this has to be in the while loop to ensure pubs and subs are processed
 
         // Sleep to maintain the desired frequency
         ros::Duration(1.0 / frequency_).sleep();
     }
-
-
-    ros::spin();
 }
 
 //################################################################################################################

@@ -7,6 +7,7 @@
 #include <drake/common/trajectories/piecewise_polynomial.h>
 #include <mutex>
 #include <std_msgs/Time.h>
+#include "myutils.h"
 
 namespace MPCControllers
 {
@@ -35,8 +36,11 @@ namespace MPCControllers
         // ROS-related members
         ros::NodeHandle nh_;
         ros::Subscriber mpc_sol_sub_;
-        ros::Subscriber mpc_start_time_sub_;
+        // ros::Subscriber mpc_start_time_sub_;
+        ros::Time mpc_t_start_;
         ros::ServiceClient list_client_;
+        bool publish_ready_signal_;
+
 
         // from latched publisher to cover the first bit before the first solution is ready
         ros::Subscriber init_u_ref_sub_; 
@@ -59,9 +63,15 @@ namespace MPCControllers
         int cols_ {};
         Eigen::MatrixXd u_sol_; // Matrix to hold the MPC solution
         double current_time_ {};
-        ros::Time t_mpc_start_ {};
         std::mutex sol_spline_mutex_;
         std::mutex mpc_t_mutex_;
+
+        int N_ = 60;
+        std::vector<std::string> var_names_ = {"q_panda", "v_panda", "us", "fn", "ft", "v1_post", "w1_post", "h"};
+        std::vector<int> dims_ = {7, 7, 7, 1, 2, 2, 1, 1};
+        std::vector<int> times_ = {N_, N_, N_, 1, 1, 1, 1, N_-1};
+        std::string ref_traj_path_ = "/home/rosdrake/src/src/mpc/traj_refs/1.npy";
+        MyUtils::ProcessedSolution data_proc_; 
     };
 
 }

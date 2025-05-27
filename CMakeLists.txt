@@ -216,8 +216,8 @@ target_link_libraries(mpc_executor_node
                       ${catkin_LIBRARIES} 
                       Eigen3::Eigen 
                       drake::drake
-                      linear_mpc_prob)
-                      #myutils)
+                      linear_mpc_prob
+                      myutils)
 
 # Add dependencies to ensure proper build order
 add_dependencies(mpc_executor_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
@@ -257,6 +257,33 @@ target_include_directories(drake_state_publisher PUBLIC
 
 # Install the executable
 install(TARGETS drake_state_publisher
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+#################################################################################################
+# Add all-in-one MPCController
+add_executable(linearmpc_controller
+               src/linearmpc_controller.cc
+               )
+
+# Link the executable to the required libraries
+target_link_libraries(linearmpc_controller
+                      ${catkin_LIBRARIES} 
+                      Eigen3::Eigen 
+                      drake::drake
+                      linear_mpc_prob
+                      myutils)
+
+# Add dependencies to ensure proper build order
+add_dependencies(linearmpc_controller ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+
+# Include the header files
+target_include_directories(linearmpc_controller PUBLIC
+        include
+        external/cnpy
+        )
+
+# Install the executable
+install(TARGETS linearmpc_controller
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 #################################################################################################
 install(FILES controller_plugins.xml
