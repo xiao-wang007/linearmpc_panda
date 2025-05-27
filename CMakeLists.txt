@@ -233,13 +233,13 @@ install(TARGETS mpc_executor_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #################################################################################################
-# Add fake_state_publisher executable
-add_executable(fake_state_publisher
-               src/fake_state_publisher.cc
+# Add drake_state_publisher executable
+add_executable(drake_state_publisher
+               src/drake_state_publisher.cc
                )
 
 # Link the executable to the required libraries
-target_link_libraries(fake_state_publisher
+target_link_libraries(drake_state_publisher
                       ${catkin_LIBRARIES} 
                       Eigen3::Eigen 
                       drake::drake
@@ -247,18 +247,24 @@ target_link_libraries(fake_state_publisher
                       myutils)
 
 # Add dependencies to ensure proper build order
-add_dependencies(fake_state_publisher ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+add_dependencies(drake_state_publisher ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
 
 # Include the header files
-target_include_directories(fake_state_publisher PUBLIC
+target_include_directories(drake_state_publisher PUBLIC
         include
         external/cnpy
         )
 
 # Install the executable
-install(TARGETS fake_state_publisher
+install(TARGETS drake_state_publisher
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 #################################################################################################
 install(FILES controller_plugins.xml
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
         )
+
+
+#################################################################################################
+add_executable(fake_u_cmd_debug src/fake_u_cmd_debug.cc)
+target_link_libraries(fake_u_cmd_debug ${catkin_LIBRARIES})
+add_dependencies(fake_u_cmd_debug ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)

@@ -16,7 +16,7 @@ namespace MPCControllers
         mpc_start_time_sub_ = nh_.subscribe("/mpc_t_start", 1, &MPCExecutorNode::get_mpc_start_time, this); 
 
         // Publisher for the upsampled control commands
-        u_cmd_upsampled_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/upsampled_sol_traj", 1);
+        u_cmd_upsampled_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/upsampled_u_cmd", 1);
 
         // Timer for publishing upsampled commands
         upsample_timer_ = nh_.createTimer(ros::Duration(1.0 / executor_frequency_), &MPCExecutorNode::publish_upsampled_command, this);
