@@ -242,12 +242,16 @@ namespace MPCControllers{
 		// std::cout << "[LinearMPCProb] u0: " << u_ref.col(0).transpose() << std::endl;
 
 		/* x_ref, u_ref are of Eigen::Matrix<Autodiff, m, n> */
+
+		
 		AutoDiffVecXd fi(nx_);
 		auto xi_ad = math::InitializeAutoDiff(x_ref.col(0), nx_+nu_, 0);
 		auto ui_ad = math::InitializeAutoDiff(u_ref.col(0), nx_+nu_, nx_); // 3rd arg, grad starting index 
-		
-		this->RK4(xi_ad, ui_ad, &fi);
-		auto fi_grad = math::ExtractGradient(fi);
+		/* up to here takes: 3.9706e-05s to init autodiff*/
+
+		this->Euler(xi_ad, ui_ad, &fi); // takes ~0.062s 
+
+		auto fi_grad = math::ExtractGradient(fi); // 1.7702e-05s to extract gradient
 
 		assert((fi_grad.cols() == nx_+nu_ && fi_grad.rows() == nx_) && "f0_grad dim is wrong!"); 
 
@@ -265,6 +269,7 @@ namespace MPCControllers{
 										  	 Eigen::Matrix<double, -1, -1>*/
 		Eigen::Matrix<double, -1, -1> Bi;
 		
+		auto start = std::chrono::high_resolution_clock::now();
 		//filling up the big lower right part of the matrix
 		for (int i = 0; i < Nh_ - 1; ++i)
 		{
@@ -273,7 +278,7 @@ namespace MPCControllers{
 			      Then I won't be bothered with initialize the refs all together! */
 			xi_ad = math::InitializeAutoDiff(x_ref.col(i), nx_+nu_, 0);
 			ui_ad = math::InitializeAutoDiff(u_ref.col(i), nx_+nu_, nx_); // 3rd arg, grad starting index 
-			this->RK4(xi_ad, ui_ad, &fi);
+			this->Euler(xi_ad, ui_ad, &fi);
 			fi_grad = math::ExtractGradient(fi);
 			Ai = fi_grad.block(0, 0, nx_, nx_);
 			Bi = fi_grad.block(0, nx_, nx_, nu_);
@@ -285,6 +290,10 @@ namespace MPCControllers{
 			C_sub.rightCols(nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
 
 		}
+
+		auto end = std::chrono::high_resolution_clock::now(); 
+		std::chrono::duration<double> elapsed = end - start;
+		std::cout << "[LinearMPCProb] constructing C takes: " << elapsed.count() << " seconds." << std::endl;
 
 		//MyUtils::VisualizeMatSparsity(C_);
 
@@ -318,18 +327,23 @@ namespace MPCControllers{
 		assert(x_ref_horizon.cols() == Nt_ && "x_ref_horizon dim is wrong!");
 		assert(u_ref_horizon.cols() == Nt_ && "u_ref_horizon dim is wrong!");
 
+		auto start = std::chrono::high_resolution_clock::now();
 		this->Build_C_d_for_solver_errCoord(integrator_, current_state, 
 										    x_ref_horizon, u_ref_horizon,
-										    udot_up_, udot_low_);
+										    udot_up_, udot_low_); // this take ~0.226s, in python it takes 0.034~0.036s
+		auto end = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> elapsed = end - start;
+		std::cout << "[linear_mpc_prob] Build_C_d_for_solver_errCoord() takes: " << elapsed.count() << " seconds." << std::endl;
+
 										
 		// std::cout << "C_: \n" << C_ << std::endl;
-		std::cout << "lb_: \n" << lb_.transpose() << std::endl;
-		std::cout << "ub_: \n" << ub_.transpose() << std::endl;
+		// std::cout << "lb_: \n" << lb_.transpose() << std::endl;
+		// std::cout << "ub_: \n" << ub_.transpose() << std::endl;
 
-		// evaluator() returns a shared_ptr<LinearConstraint>
-		this->cst_->evaluator()->UpdateCoefficients(C_, lb_, ub_); 
+		this->cst_->evaluator()->UpdateCoefficients(C_, lb_, ub_); // takes 1.9773e-05 seconds
 
-		result_ = solver_.Solve(prog_);
+
+		result_ = solver_.Solve(prog_); // takes 0.0006s to solve
 
 		if (result_.is_success())
 		{
@@ -337,7 +351,7 @@ namespace MPCControllers{
 			dx_sol_ = result_.GetSolution(dx_vars_);
 			du_sol_ = result_.GetSolution(du_vars_);
 			//std::cout << "x_sol: " << x_sol.transpose() << std::endl;
-			std::cout << "[LinearMPCProb] du_sol_: \n" << du_sol_ << std::endl;
+			// std::cout << "[LinearMPCProb] du_sol_: \n" << du_sol_ << std::endl;
 		} else {
 			std::cout << "Solver failed!" << std::endl;
 			std::cout << "Constraint violations: " << std::endl;

@@ -72,7 +72,6 @@ void DrakeStatePublisherNode::build_simulation()
     std::cout << "checking in DrakeStatePublisherNode build_simulation() 4" << std::endl;
     simulator_.get()->set_publish_every_time_step(true);
     simulator_.get()->set_target_realtime_rate(1.); // =1. means =real-time, > 1. means faster than real-time
-    simulator_.get()->Initialize();
     // simulator_.AdvanceTo(2.);
 
     std::cout << "checking in DrakeStatePublisherNode build_simulation() 5" << std::endl;
@@ -111,6 +110,9 @@ void DrakeStatePublisherNode::publish_state()
         msg.velocity[i] = state[nq + i];
     }
     state_pub_.publish(msg);
+
+    // auto wall_time = ros::WallTime::now();
+    // std::cout << "[drake_state_publisher] wall time now: " << wall_time << std::endl;
 }
 
 
@@ -128,6 +130,7 @@ void DrakeStatePublisherNode::set_initial_state()
     std::cout << "checking in DrakeStatePublisherNode set_initial_state() 3" << std::endl;
     plant_ptr_->SetPositionsAndVelocities(&plant_context, init_state);
     std::cout << "checking in DrakeStatePublisherNode set_initial_state() 4" << std::endl;
+    // std::cout << "Initial state set to: " << init_state.transpose() << std::endl; // val check correct
 }
 
 //################################################################################################################
@@ -136,6 +139,8 @@ void DrakeStatePublisherNode::run()
     nh_.setParam("/simulation_ready", true);  // Global flag
     ROS_INFO("Simulation node is ready!");
 
+    simulator_.get()->Initialize();
+
     ros::Rate rate(frequency_);
     // Spin the node
     while (ros::ok())
@@ -143,21 +148,30 @@ void DrakeStatePublisherNode::run()
         if (!plant_ptr_)
         { }
 
+
         auto& sim_context = simulator_->get_mutable_context();
         auto& plant_context = diagram_->GetMutableSubsystemContext(*plant_ptr_, &sim_context);
 
         // Apply control (thread-safe)
         {
             std::lock_guard<std::mutex> lock(control_mutex_);
+            // std::cout << "latest_control_input_ size: " << latest_control_input_.size() << std::endl;
             if (latest_control_input_.size() == plant_ptr_->num_actuators()) 
             {
                 // std::cout << "Applying control input: " << latest_control_input_.transpose() << std::endl;
+                // std::cout << "current state: " << plant_ptr_->GetPositionsAndVelocities(plant_context).transpose() << std::endl;
+                // Apply the latest control input to the plant:w
                 plant_ptr_->get_actuation_input_port().FixValue(
                     &plant_context, latest_control_input_);
-            }
+                } else { // if latest_control_input_ is not set, use gravity compensation to keep the robot in place
+                    auto gravity_compensation = plant_ptr_->CalcGravityGeneralizedForces(plant_context);
+                    // std::cout << "Applying gravity compensation: " << gravity_compensation.transpose() << std::endl;
+                    plant_ptr_->get_actuation_input_port().FixValue( &plant_context, -gravity_compensation);
+                }
         }
 
         // Advance the simulation
+        // std::cout << "Simulation time: " << simulator_->get_context().get_time() << " seconds." << std::endl;
         simulator_->AdvanceTo(simulator_->get_context().get_time() + h_sim_);
 
         // publish the state

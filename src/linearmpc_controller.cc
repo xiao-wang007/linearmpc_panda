@@ -66,6 +66,10 @@ namespace MyControllers
         {
             received_first_state_ = true; // Set the flag to true after receiving the first state
             ROS_INFO("Received first joint state from simulation.");
+            ROS_INFO_STREAM("Current joint positions: " << q_now_.transpose());
+            ROS_INFO_STREAM("Current joint velocities: " << v_now_.transpose());
+            auto wall_time = ros::WallTime::now();
+            std::cout << "[linearmpc_controller] wall time now: " << wall_time << std::endl;
         }
         mpc_t_start_ = ros::Time::now();
     }
@@ -94,9 +98,11 @@ namespace MyControllers
         // current_time_ = std::chrono::duration_cast<std::chrono::duration<double>>(t_now_chro - t_start_node_).count();
         auto current_time = (t_now - mpc_t_start_).toSec();
         std::cout << "[linearmpc_controller] time lapsed since node started: " << current_time << std::endl;
-        prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, current_time);
+
+        prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, current_time); // takes 0.22~2.45s
 
         prob_->Get_solution(latest_mpc_sol_); //Pass by argument
+        // std::cout << "[linearmpc_controller] latest_mpc_sol_: \n" << latest_mpc_sol_ << std::endl;
         u_cmd_spline_ = drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(
                 Eigen::VectorXd::LinSpaced(Nt_, 0., mpc_horizon_), latest_mpc_sol_);
 
@@ -105,6 +111,11 @@ namespace MyControllers
     //###############################################################################
     void LinearMPCControllerNode::publish_upsampled_command(const ros::TimerEvent& event)
     {
+        if (!received_first_state_) 
+        {
+            ROS_WARN_THROTTLE(2.0, "Waiting for first joint state before publishing upsampled command...");
+            return;
+        }
         drake::trajectories::PiecewisePolynomial<double> u_cmd_spline_copy;
         {
             // Lock the mutex to ensure thread safety
@@ -114,6 +125,7 @@ namespace MyControllers
 
         auto t_now = ros::Time::now();
         Eigen::VectorXd upsampled_u_cmd = u_cmd_spline_copy.value((t_now - mpc_t_start_).toSec());
+        // std::cout << "[linearmpc_controller] upsampled_u_cmd: " << upsampled_u_cmd.transpose() << std::endl;
         
         std_msgs::Float64MultiArray msg;
         msg.data = std::vector<double>(upsampled_u_cmd.data(), upsampled_u_cmd.data() + upsampled_u_cmd.size());
@@ -143,7 +155,22 @@ namespace MyControllers
                 {
                     while (ros::ok()) 
                     {
-                        solve_and_update();
+                        try 
+                        { 
+                            auto start = std::chrono::high_resolution_clock::now();
+                            solve_and_update(); 
+                            auto end = std::chrono::high_resolution_clock::now();
+                            std::chrono::duration<double> elapsed = end - start;
+                            std::cout << "[linearmpc_controller] solve_and_update took: " << elapsed.count() << " seconds." << std::endl;
+                        } 
+                        catch (const std::bad_alloc& e) 
+                        {
+                            ROS_FATAL_STREAM("Memory allocation failed: " << e.what());
+                        } 
+                        catch (const std::exception& e) 
+                        {
+                         ROS_FATAL_STREAM("Exception in solve_and_update: " << e.what());
+                        }
                     }
                 }
         );
