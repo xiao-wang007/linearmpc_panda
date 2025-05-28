@@ -6,8 +6,7 @@ namespace MyControllers
     //###############################################################################
     LinearMPCControllerNode::LinearMPCControllerNode()
     {
-        nh_.param<bool>("mpc_ready_signal", mpc_ready_signal_, false);
-        upsampled_u_cmd_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/upsampled_u_cmd_out", 1);
+        upsampled_u_cmd_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/upsampled_u_cmd", 1);
 
         state_sub_ = nh_.subscribe("/joint_states", 1, &LinearMPCControllerNode::joint_state_callback, this);
         upsample_timer_ = nh_.createTimer(ros::Duration(1.0 / executor_frequency_), &LinearMPCControllerNode::publish_upsampled_command, this);
@@ -52,7 +51,6 @@ namespace MyControllers
         auto ts = Eigen::VectorXd::LinSpaced(Nt_, 0., Nh_ * h_mpc_);
         u_cmd_spline_ = drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(ts, data_proc_.u_ref_spline.vector_values(ts));
         
-        mpc_t_start_ = ros::Time::now();
         
         ROS_INFO("MPCControllerNode initialized successfully!\n");
     }
@@ -60,13 +58,28 @@ namespace MyControllers
     //###############################################################################
     void LinearMPCControllerNode::joint_state_callback(const sensor_msgs::JointState::ConstPtr& msg)
     {
+        std::lock_guard<std::mutex> lock(state_mutex_);
         q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->position.data());
         v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->velocity.data());
+
+        if (!received_first_state_)
+        {
+            received_first_state_ = true; // Set the flag to true after receiving the first state
+            ROS_INFO("Received first joint state from simulation.");
+        }
+        mpc_t_start_ = ros::Time::now();
     }
 
     //###############################################################################
     void LinearMPCControllerNode::solve_and_update()
     {
+        if (!received_first_state_)
+        {
+            ROS_WARN_THROTTLE(2.0, "Waiting for first joint state before solving...");
+            ros::Duration(0.01).sleep();
+            return;
+        }
+
         Eigen::VectorXd local_q_now_, local_v_now_;
         {
             std::lock_guard<std::mutex> lock(state_mutex_);
@@ -80,7 +93,7 @@ namespace MyControllers
         // auto t_now_chro = std::chrono::high_resolution_clock::now();
         // current_time_ = std::chrono::duration_cast<std::chrono::duration<double>>(t_now_chro - t_start_node_).count();
         auto current_time = (t_now - mpc_t_start_).toSec();
-        std::cout << "time-elipsed since node started: " << current_time << std::endl;
+        std::cout << "[linearmpc_controller] time lapsed since node started: " << current_time << std::endl;
         prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, current_time);
 
         prob_->Get_solution(latest_mpc_sol_); //Pass by argument
@@ -110,11 +123,19 @@ namespace MyControllers
     //###############################################################################
     void LinearMPCControllerNode::run()
     {
-        if (mpc_ready_signal_) 
+        ROS_INFO("Waiting for the simulation to be ready...");
+
+        while (ros::ok() && !simulation_ready_signal_)
         {
-            nh_.setParam("/mpc_controller_ready", true);  // Global flag
-            ROS_INFO("MPC controller is ready!");
+            nh_.getParam("/simulation_ready", simulation_ready_signal_);
+            if (!simulation_ready_signal_)
+            {
+                std::cout << "Simulation not ready yet, waiting..." << std::endl;
+                ros::Duration(0.1).sleep(); // Sleep for a short duration to avoid busy-waiting
+            }
         }
+
+        ROS_INFO("Simulation is ready!");
 
         //start solver in a separate thread
         std::thread solver_thread (
@@ -126,6 +147,8 @@ namespace MyControllers
                     }
                 }
         );
+
+        //set a flag here to start spin when sim node starts to publish joint states
 
         ros::spin(); // spin here as solve_and_update() is called in a separate thread
 

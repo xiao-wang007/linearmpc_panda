@@ -112,7 +112,8 @@ namespace MyControllers
         std::mutex u_cmd_spline_mutex_; // Mutex to protect u_ref_cmd_ access
         Eigen::VectorXd state_now_ {Eigen::VectorXd::Zero(nx_)};
         ros::Timer upsample_timer_;
-        bool mpc_ready_signal_; // Flag to indicate if MPC is ready
+        bool simulation_ready_signal_ {false}; // Flag to indicate if sim is ready
+        std::atomic<bool> received_first_state_ {false}; // Flag to stop the controller thread
 
     };
 

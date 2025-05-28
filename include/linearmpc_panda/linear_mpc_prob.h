@@ -83,9 +83,8 @@ namespace MPCControllers{
 										   //const Eigen::Ref<const AutoDiffVecXd>& u_ref_ad,
 										   const Eigen::VectorXd dudt_up = {},
 										   const Eigen::VectorXd dudt_low = {});
+
 		//
-		void Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
-													  ros::Time t_now);
 		void Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
 													  double t_now);
 

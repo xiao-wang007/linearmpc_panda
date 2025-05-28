@@ -1,24 +1,15 @@
 <?xml version="1.0" ?>
 <launch>
-  <!-- MPC Solver Node -->
-  <node name="mpc_solver_node" pkg="linearmpc_panda" type="mpc_solver_node" output="screen">
-    <param name="publish_ready_signal" value="true"/>
+  <!-- Initialize simulation_ready flag to false -->
+  <param name="simulation_ready" value="false" />
+
+  <!-- Simulation Node (starts immediately) -->
+  <node pkg="linearmpc_panda" type="drake_state_publisher" name="drake_state_publisher" output="screen">
+    <!-- <remap from="/upsampled_u_cmd_in" to="/upsampled_u_cmd_out" /> -->
+    <!-- <remap from="/joint_states_out" to="/joint_states_in" /> -->
   </node>
 
-
-  <!-- MPC Executor Node -->
-  <node pkg="linearmpc_panda" type="mpc_executor_node" name="mpc_executor_node" output="screen">
-    <!-- Enable readiness signaling for this node -->
-    <param name="publish_ready_signal" value="true" />
-    <!-- Remap input to subscribe to solver's output -->
-    <remap from="/mpc_sol_in" to="/mpc_sol_out" />
+  <!-- MPC Node (waits for simulation ready) -->
+  <node pkg="linearmpc_panda" type="linearmpc_controller" name="linearmpc_controller" output="screen">
   </node>
-
-    <!-- Simulation -->
-    <node pkg="linearmpc_panda" type="drake_state_publisher" name="drake_state_publisher" output="screen"
-          launch-prefix="bash -c 'until rosparam get /mpc_solver_ready &amp;&amp; rosparam get /mpc_executor_ready; do sleep 0.1; done; $0 $@'">
-        <!-- Remap input to subscribe to executor's output -->
-        <remap from="/upsampled_u_cmd_in" to="/upsampled_u_cmd_out" />
-    </node>
-
 </launch>

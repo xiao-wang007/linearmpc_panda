@@ -12,8 +12,8 @@ DrakeStatePublisherNode::DrakeStatePublisherNode()
     nh_.param("init_v", joint_velocities_, std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
 
     // Initialize the publisher
-    state_pub_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
-    control_sub_ = nh_.subscribe("/upsampled_u_cmd_in", 1, &DrakeStatePublisherNode::control_callback, this);
+    state_pub_ = nh_.advertise<sensor_msgs::JointState>("/joint_states", 1);
+    control_sub_ = nh_.subscribe("/upsampled_u_cmd", 1, &DrakeStatePublisherNode::control_callback, this);
 
     // Initialize the timer
     // timer_ = nh_.createTimer(ros::Duration(1.0 / frequency_), &DrakeStatePublisherNode::publish_state, this);
@@ -28,7 +28,7 @@ void DrakeStatePublisherNode::control_callback(const std_msgs::Float64MultiArray
 {
     std::lock_guard<std::mutex> lock(control_mutex_);
     latest_control_input_ = Eigen::Map<const Eigen::VectorXd>(msg->data.data(), msg->data.size());
-    std::cout << "control input in callback: " << latest_control_input_.transpose() << std::endl;
+    // std::cout << "control input in callback: " << latest_control_input_.transpose() << std::endl;
 }
 
 //################################################################################################################
@@ -92,6 +92,7 @@ void DrakeStatePublisherNode::publish_state()
     // std::cout << "Publishing state of size: " << state.size() << std::endl;
     // std::cout << "state: " << state.transpose() << std::endl;
 
+    // std::cout << "[drake_sim_node] state: " << state.transpose() << std::endl;
     sensor_msgs::JointState msg;
     msg.header.stamp = ros::Time::now();
 
@@ -132,6 +133,9 @@ void DrakeStatePublisherNode::set_initial_state()
 //################################################################################################################
 void DrakeStatePublisherNode::run()
 {
+    nh_.setParam("/simulation_ready", true);  // Global flag
+    ROS_INFO("Simulation node is ready!");
+
     ros::Rate rate(frequency_);
     // Spin the node
     while (ros::ok())
@@ -147,7 +151,7 @@ void DrakeStatePublisherNode::run()
             std::lock_guard<std::mutex> lock(control_mutex_);
             if (latest_control_input_.size() == plant_ptr_->num_actuators()) 
             {
-                std::cout << "Applying control input: " << latest_control_input_.transpose() << std::endl;
+                // std::cout << "Applying control input: " << latest_control_input_.transpose() << std::endl;
                 plant_ptr_->get_actuation_input_port().FixValue(
                     &plant_context, latest_control_input_);
             }
