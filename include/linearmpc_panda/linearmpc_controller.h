@@ -114,6 +114,7 @@ namespace MyControllers
         ros::Timer upsample_timer_;
         bool simulation_ready_signal_ {false}; // Flag to indicate if sim is ready
         std::atomic<bool> received_first_state_ {false}; // Flag to stop the controller thread
+        bool mpc_started_ {false}; // Flag to indicate if MPC has started
 
     };
 

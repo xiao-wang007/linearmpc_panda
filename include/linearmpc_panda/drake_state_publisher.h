@@ -50,4 +50,5 @@ private:
     Eigen::VectorXd latest_control_input_ {}; // Assuming 7 joints for the Panda robot
     std::mutex control_mutex_;
     std::atomic<bool> received_first_control_ {false}; // Flag to indicate if the simulation is ready
+    ros::Time mpc_start_t_ {};
 };

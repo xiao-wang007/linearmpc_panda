@@ -142,6 +142,8 @@ void DrakeStatePublisherNode::run()
     simulator_.get()->Initialize();
 
     ros::Rate rate(frequency_);
+
+    mpc_start_t_ = ros::Time::now();
     // Spin the node
     while (ros::ok())
     {
@@ -172,7 +174,10 @@ void DrakeStatePublisherNode::run()
 
         // Advance the simulation
         // std::cout << "Simulation time: " << simulator_->get_context().get_time() << " seconds." << std::endl;
-        simulator_->AdvanceTo(simulator_->get_context().get_time() + h_sim_);
+        // simulator_->AdvanceTo(simulator_->get_context().get_time() + h_sim_);
+        auto t_now = ros::Time::now();
+        
+        simulator_->AdvanceTo((t_now - mpc_start_t_).toSec() + h_sim_);
 
         // publish the state
         publish_state();

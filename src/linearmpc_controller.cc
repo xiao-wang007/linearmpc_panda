@@ -71,7 +71,6 @@ namespace MyControllers
             auto wall_time = ros::WallTime::now();
             std::cout << "[linearmpc_controller] wall time now: " << wall_time << std::endl;
         }
-        mpc_t_start_ = ros::Time::now();
     }
 
     //###############################################################################
@@ -82,6 +81,14 @@ namespace MyControllers
             ROS_WARN_THROTTLE(2.0, "Waiting for first joint state before solving...");
             ros::Duration(0.01).sleep();
             return;
+        }
+
+
+        if (!mpc_started_) 
+        {
+            mpc_t_start_ = ros::Time::now();
+            mpc_started_ = true;
+            ROS_INFO_STREAM("[linearmpc_controller] MPC started, t_start initialized: t_start = " << mpc_t_start_);
         }
 
         Eigen::VectorXd local_q_now_, local_v_now_;
@@ -102,9 +109,9 @@ namespace MyControllers
         prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, current_time); // takes 0.22~2.45s
 
         prob_->Get_solution(latest_mpc_sol_); //Pass by argument
-        // std::cout << "[linearmpc_controller] latest_mpc_sol_: \n" << latest_mpc_sol_ << std::endl;
+        std::cout << "[linearmpc_controller] latest_mpc_sol_: \n" << latest_mpc_sol_ << std::endl;
         u_cmd_spline_ = drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(
-                Eigen::VectorXd::LinSpaced(Nt_, 0., mpc_horizon_), latest_mpc_sol_);
+                Eigen::VectorXd::LinSpaced(Nt_, current_time, current_time + mpc_horizon_), latest_mpc_sol_);
 
     }
 
@@ -158,7 +165,9 @@ namespace MyControllers
                         try 
                         { 
                             auto start = std::chrono::high_resolution_clock::now();
+
                             solve_and_update(); 
+
                             auto end = std::chrono::high_resolution_clock::now();
                             std::chrono::duration<double> elapsed = end - start;
                             std::cout << "[linearmpc_controller] solve_and_update took: " << elapsed.count() << " seconds." << std::endl;
