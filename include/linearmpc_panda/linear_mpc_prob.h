@@ -1,12 +1,11 @@
 #pragma once
-
 #include <Eigen/Dense>
 #include <unsupported/Eigen/KroneckerProduct>
 #include <iostream>
 #include <cassert>
 #include <optional>
+#include <functional>
 #include "myutils.h"
-#include <ros/ros.h>
 
 #include <drake/solvers/osqp_solver.h>
 #include <drake/solvers/solve.h>
@@ -31,6 +30,7 @@ namespace MPCControllers{
 
 	using namespace drake; // for all eigen types
 	using namespace drake::solvers;
+	
 
 	//
 	class LinearMPCProb 
@@ -38,7 +38,7 @@ namespace MPCControllers{
 	public:
 		// have to create the plant here since DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(MultibodyPlant)
 		LinearMPCProb(const std::string& plant_file,
-					  const std::string& integrator,
+					  const std::string& integrator_name,
 					  int nx, 
 					  int nu, 
 					  double execution_length,
@@ -75,28 +75,39 @@ namespace MPCControllers{
 		void Euler(const Eigen::Ref<const AutoDiffVecXd>& x, AutoDiffVecXd* y);
 		
 		//
-		void Build_C_d_for_solver_errCoord(const std::string& integrator,
-		 								   const Eigen::VectorXd& x0,
+		void Build_C_d_for_solver_errCoord_RK4( const Eigen::VectorXd& x0,
 		 								   const Eigen::Ref<Eigen::MatrixXd>& x_ref,
 		 								   const Eigen::Ref<Eigen::MatrixXd>& u_ref,
-										   //const Eigen::Ref<const AutoDiffVecXd>& x_ref_ad,
-										   //const Eigen::Ref<const AutoDiffVecXd>& u_ref_ad,
+										   const Eigen::VectorXd dudt_up = {},
+										   const Eigen::VectorXd dudt_low = {});
+		//
+		template <void (LinearMPCProb::*Integrator)(
+					const Eigen::Ref<const AutoDiffVecXd>&,
+					const Eigen::Ref<const AutoDiffVecXd>&,
+					AutoDiffVecXd*)>
+		void Build_C_d_for_solver_errCoord(const Eigen::VectorXd& x0,
+		 								   const Eigen::Ref<Eigen::MatrixXd>& x_ref,
+		 								   const Eigen::Ref<Eigen::MatrixXd>& u_ref,
 										   const Eigen::VectorXd dudt_up = {},
 										   const Eigen::VectorXd dudt_low = {});
 
 		//
 		void Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
-													  double t_now);
+												      double t_now);
+		//
+		void Solve_and_update_C_d_for_solver_errCoord_test(const Eigen::VectorXd& current_state,
+														   const Eigen::MatrixXd& x_ref,
+														   const Eigen::MatrixXd& u_ref);
 
 		//
 		void Get_solution(Eigen::MatrixXd& output);
 
 
 	private:
-		//drake::systems::DiscreteStateIndex state_index_;
-		std::string integrator_;
+		drake::systems::DiscreteStateIndex state_index_;
+		std::string integrator_name_;
 		int nx_, nu_, Nt_, Nh_;
-		double h_mpc_, h_env_, execution_length_;
+		double h_mpc_, h_env_, execution_length_, mpc_horizon_;
 		Eigen::MatrixXd Q_;
 		Eigen::MatrixXd R_;
 		Eigen::MatrixXd P_;
@@ -123,6 +134,8 @@ namespace MPCControllers{
 		solvers::MathematicalProgramResult result_;
 		Eigen::MatrixXd dx_sol_;
 		Eigen::MatrixXd du_sol_;
+		Eigen::MatrixXd u_ref_cmd_; // for interpolation
+		PiecewisePolynomial<double> u_ref_cmd_spline_;
 		//VectorDecisionVariable<Eigen::Dynamic> decVar_flat_;
 		int C_rows_;
 		int C_cols_;
@@ -130,12 +143,6 @@ namespace MPCControllers{
 		Eigen::MatrixXd C_;
 		Eigen::VectorXd lb_;
 		Eigen::VectorXd ub_;
-
-		//solver output
-		Eigen::MatrixXd u_ref_cmd_;
-
-		//ros::time
-		ros::Time t_init_node_ {};
 	};
 
 }
