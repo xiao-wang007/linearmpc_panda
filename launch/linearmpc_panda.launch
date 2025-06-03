@@ -1,0 +1,9 @@
+<launch>
+    <!-- load the controller .ymal so controller_spawner knows where it is -->
+    <rosparam file="$(find linearmpc_panda)/config/linearmpc_controller.yaml" command="load"/>
+	<node name="controller_spawner" pkg="controller_manager" type="spawner" args="bring_to_init_controller" respawn="false" output="screen"/>
+	<param name="franka_ip" value="panda-control"/>
+
+	<!-- <node name="pump_controller" pkg="cobot_pump_ros" type="cobot_pump_node" respawn="false" output="screen"/> -->
+
+</launch>

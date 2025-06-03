@@ -261,6 +261,32 @@ install(TARGETS drake_state_publisher
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #################################################################################################
+# Add move_to_pose node
+add_executable(move_to_pose
+               src/move_to_pose.cc
+               )
+
+# Link the executable to the required libraries
+target_link_libraries(move_to_pose
+                      ${catkin_LIBRARIES} 
+                      Eigen3::Eigen 
+                      drake::drake
+                      myutils)
+
+# Add dependencies to ensure proper build order
+add_dependencies(move_to_pose ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+
+# Include the header files
+target_include_directories(move_to_pose PUBLIC
+        include
+        external/cnpy
+        )
+
+# Install the executable
+install(TARGETS move_to_pose
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+#################################################################################################
 # Add all-in-one MPCController
 add_executable(linearmpc_controller
                src/linearmpc_controller.cc
