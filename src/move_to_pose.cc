@@ -8,7 +8,7 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   ros::Publisher traj_pub = nh.advertise<trajectory_msgs::JointTrajectory>(
-      "/bring_to_init_controller/command", 10);
+      "/position_joint_trajectory_controller/command", 10);
 
   // Wait for the publisher to connect to subscribers
   ros::Duration(1.0).sleep();
@@ -20,8 +20,7 @@ int main(int argc, char** argv)
       "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"};
 
   trajectory_msgs::JointTrajectoryPoint point;
-  need to get this!! 
-  point.positions = {0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785};  // Desired pose
+  point.positions = {0.770901, 0.396021, -0.812618, -2.17939, 0.663888, 2.34041, -0.5};  
   point.time_from_start = ros::Duration(3.0);  // Time to reach the pose
 
   traj_msg.points.push_back(point);
