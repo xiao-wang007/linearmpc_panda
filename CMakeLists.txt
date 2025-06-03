@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
     roscpp
     std_msgs
     message_generation
+    joint_trajectory_controller
 )
 
 find_package(drake REQUIRED)
