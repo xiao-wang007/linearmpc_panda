@@ -1,5 +1,5 @@
 // #include "panda_QP_controller.h"
-#include <linearmpc_panda/panda_QP_controller.h>
+#include <linearmpc_panda/panda_mpc_torque_controller.h>
 #include <pluginlib/class_list_macros.h>
 #include <franka/robot_state.h>
 #include <franka_hw/franka_model_interface.h>

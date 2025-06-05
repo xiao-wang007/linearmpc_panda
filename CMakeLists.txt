@@ -157,17 +157,18 @@ target_include_directories(myutils PUBLIC
         )
 add_subdirectory(external/cnpy) # needed by myutils
 
-###############
-## add nodes ##
-###############
+#################################################################################################
+## this part is just here for testing compilation. The code need to be compiled on panda       ##
+## workstation to direct control panda                                                         ##
+#################################################################################################
 #################################################################################################
 include_directories(
   ${catkin_INCLUDE_DIRS}
   src/linearmpc_panda
 )
-
+# there is no main() as this is a controller interface. Therefore have to use add_library()
 add_library(linearmpc_panda
-            src/panda_QP_controller.cpp)
+            src/panda_mpc_torque_controller.cc)
 
 target_link_libraries(linearmpc_panda ${catkin_LIBRARIES} Eigen3::Eigen drake::drake)
 add_dependencies(linearmpc_panda ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
@@ -181,6 +182,9 @@ install(TARGETS linearmpc_panda
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         )
 
+###############
+## add nodes ##
+###############
 #################################################################################################
 # add mpc_solver_node executable
 add_executable(mpc_solver_node 
