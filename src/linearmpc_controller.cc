@@ -8,7 +8,7 @@ namespace MyControllers
     {
         upsampled_u_cmd_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/upsampled_u_cmd", 1);
 
-        state_sub_ = nh_.subscribe("/joint_states", 1, &LinearMPCControllerNode::joint_state_callback, this);
+        state_sub_ = nh_.subscribe("/franka_state_controller/joint_states", 1, &LinearMPCControllerNode::joint_state_callback, this);
         upsample_timer_ = nh_.createTimer(ros::Duration(1.0 / executor_frequency_), &LinearMPCControllerNode::publish_upsampled_command, this);
 
         Nh_ = Nt_ - 1;
@@ -91,14 +91,15 @@ namespace MyControllers
             ROS_INFO_STREAM("[linearmpc_controller] MPC started, t_start initialized: t_start = " << mpc_t_start_);
         }
 
-        Eigen::VectorXd local_q_now_, local_v_now_;
+        Eigen::VectorXd local_q_now, local_v_now;
         {
             std::lock_guard<std::mutex> lock(state_mutex_);
-            local_q_now_ = q_now_;
-            local_v_now_ = v_now_;
+            local_q_now = q_now_;
+            local_v_now = v_now_;
         } // lock release when go out of this scope
 
-        state_now_ << local_q_now_, local_v_now_; // these are updated in the subcription callback
+        state_now_ << local_q_now, local_v_now; // these are updated in the subcription callback
+        std::cout << "q_now: " << local_q_now.transpose() << std::endl;
 
         auto t_now = ros::Time::now();
         // auto t_now_chro = std::chrono::high_resolution_clock::now();
@@ -142,19 +143,19 @@ namespace MyControllers
     //###############################################################################
     void LinearMPCControllerNode::run()
     {
-        ROS_INFO("Waiting for the simulation to be ready...");
+        //ROS_INFO("Waiting for the simulation to be ready...");
 
-        while (ros::ok() && !simulation_ready_signal_)
-        {
-            nh_.getParam("/simulation_ready", simulation_ready_signal_);
-            if (!simulation_ready_signal_)
-            {
-                std::cout << "Simulation not ready yet, waiting..." << std::endl;
-                ros::Duration(0.1).sleep(); // Sleep for a short duration to avoid busy-waiting
-            }
-        }
+        //while (ros::ok() && !simulation_ready_signal_)
+        //{
+            //nh_.getParam("/simulation_ready", simulation_ready_signal_);
+            //if (!simulation_ready_signal_)
+            //{
+                //std::cout << "Simulation not ready yet, waiting..." << std::endl;
+                //ros::Duration(0.1).sleep(); // Sleep for a short duration to avoid busy-waiting
+            //}
+        //}
 
-        ROS_INFO("Simulation is ready!");
+        //ROS_INFO("Simulation is ready!");
 
         //start solver in a separate thread
         std::thread solver_thread (

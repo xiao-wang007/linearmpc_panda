@@ -36,21 +36,14 @@ namespace linearmpc_panda {
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint6"));
         joint_handles_.push_back(effort_joint_interface->getHandle("panda_joint7"));
 
-		/* Direct access to panda's current state, no need to use a sub, but here in gazebo, I need to do this through ros */
-		//get panda state, topic belongs to franka_gazebo, which operates as 1kHz, then the callback is also called at 1kHz
-		//state_sub_ = node_handle.subscribe<sensor_msgs::JointState>("joint_states", 1, &LinearMPCController::joint_state_callback_sim, this);
-
-		// Create a publisher for the Panda hardware state
-		//state_pub_ = node_handle.advertise<sensor_msgs::JointState>("joint_state_pandaHW", 1);
-
         //// Convert current robot position and velocity into Eigen data storage
         //Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> q_now_(robot_state_.q.data());
         //Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> v_now_(robot_state_.dq.data());
 		//Eigen::Map<Eigen::Matrix<double, NUM_JOINTS, 1>> u_now_(robot_state_.tau_J.data());
 
 		//get upsampled solution trajectory, at hardware frequency 1kHz 
-		executor_sub_ = node_handle.subscribe("/upsampled_sol_traj", 1, &LinearMPCController::executor_callback, this);
-		mpc_t_start_pub_ = node_handle.advertise<std_msgs::Time>("/mpc_t_start", 1, true); //True for latched publisher
+		executor_sub_ = node_handle.subscribe("/upsampled_u_cmd", 1, &LinearMPCController::executor_callback, this);
+		// mpc_t_start_pub_ = node_handle.advertise<std_msgs::Time>("/mpc_t_start", 1, true); //True for latched publisher
 
 		u_cmd_ = Eigen::VectorXd::Zero(NUM_JOINTS);
 
@@ -61,15 +54,6 @@ namespace linearmpc_panda {
 	//#######################################################################################
     void LinearMPCController::starting(const ros::Time& time) 
     {
-		ROS_INFO("Waiting for gazebo /clock to start...");
-		/* If simulated time (/clock) is OFF:
-		   ros::Time::now() returns wall-clock time since Unix epoch (e.g. seconds since 1970). 
-		   So ros::Time::now().toSec() will be a large positive number, definitely never zero.
-
-		   If simulated time (/clock) is ON:
-		   ROS time is controlled by the /clock topic, which may start at zero. Until /clock publishes, 
-		   ros::Time::now() returns zero (or the zero time). So checking ros::Time::now().toSec() == 0.0 
-		   is valid only if you expect simulated time and want to wait for it to start.*/
 		while (ros::Time::now().toSec() == 0.0 && ros::ok()) 
 		{
 			ros::Duration(0.1).sleep();
@@ -112,29 +96,18 @@ namespace linearmpc_panda {
 		v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.dq.data());
 		u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(robot_state_.tau_J.data());
 		
+		Eigen::VectorXd u_cmd_copy;
+		{
+			std::lock_guard<std::mutex> lock(u_cmd_mutex_);
+			u_cmd_copy = u_cmd_;
+		}
 
-		// IN: set the torques to the robot, obtained from mpc_solver_node
-		for (size_t i = 0; i < NUM_JOINTS; i++) {
-			// ROS_INFO("checking inside update(), 2, in the for loop \n");
-			//std::cout << "u_cmd_: " << u_cmd_.transpose() << std::endl;
-			joint_handles_[i].setCommand(u_cmd_[i]); //u_cmd_ is from the sub
-			// ROS_INFO("checking inside update(), 3, in the for loop \n");
+		for (size_t i = 0; i < NUM_JOINTS; i++) 
+		{
+			joint_handles_[i].setCommand(u_cmd_copy[i]); //u_cmd_ is from the sub
 		}
 
     }
-
-	//#######################################################################################
-	void LinearMPCController::joint_state_callback_sim(const sensor_msgs::JointState::ConstPtr& msg) 
-	{
-		//store current state
-		// get the current joint position and velocity
-		//std::cout << '\n' << std::endl;
-		//std::lock_guard<std::mutex> lock(joint_state_mutex_);
-		//latest_joint_state_msg_ = *msg;
-		//q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->position.data());
-		//v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->velocity.data());
-		//u_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->effort.data());
-	}
 
 	//#######################################################################################
 	bool LinearMPCController::initial_pose_ok()
@@ -154,6 +127,7 @@ namespace linearmpc_panda {
 		}
 		else
 		{
+			std::lock_guard<std::mutex> lock(u_cmd_mutex_);
 			u_cmd_ = Eigen::Map<const Eigen::VectorXd>(dim7_vec_msg->data.data(), dim7_vec_msg->data.size());
 		}
 	}

@@ -67,8 +67,8 @@ namespace MyControllers
         ros::Time mpc_t_start_;
         Eigen::MatrixXd latest_mpc_sol_;
 
-        std::string panda_file_ {"/home/rosdrake/panda_arm.urdf"};
-        std::string integrator_ {"RK4"};
+        std::string panda_file_ {"/home/rosdrake/src/drake_models/franka_description/urdf/panda_arm.urdf"};
+        std::string integrator_ {"Euler"};
         drake::math::RigidTransform<double> X_W_base_ {};
         int nx_ {14}; 
         int nq_ {7};

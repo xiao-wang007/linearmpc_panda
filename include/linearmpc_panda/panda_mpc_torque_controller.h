@@ -41,13 +41,7 @@ namespace linearmpc_panda {
         void starting(const ros::Time& time) override;
 
         //
-        void joint_state_callback_sim(const sensor_msgs::JointState::ConstPtr& msg);
-
-        //
         void executor_callback(const std_msgs::Float64MultiArray::ConstPtr& msg);
-
-        //
-        void go_to_init_pose(const Eigen::VectorXd& init_joint_pos);
 
         //
         bool initial_pose_ok();
@@ -66,14 +60,10 @@ namespace linearmpc_panda {
         Eigen::Matrix<double, NUM_JOINTS, 1> v_now_ {};
         Eigen::Matrix<double, NUM_JOINTS, 1> u_now_ {};
 
-        std::mutex joint_state_mutex_;
         franka::RobotState robot_state_ {};
         Eigen::VectorXd u_cmd_ {};
+        std::mutex u_cmd_mutex_;
         std_msgs::Time mpc_t_start_msg_ {};
-
-        // ros::Subscriber state_sub_;
-        //ros::Publisher mpc_sol_pub_;
-        //std_msgs::Float64MultiArray mpc_sol_msg_;
     };
 } // namespace linearmpc_panda
 
