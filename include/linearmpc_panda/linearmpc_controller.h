@@ -68,6 +68,7 @@ namespace MyControllers
         Eigen::MatrixXd latest_mpc_sol_;
 
         std::string panda_file_ {"/home/rosdrake/src/drake_models/franka_description/urdf/panda_arm.urdf"};
+        bool exclude_gravity_from_traj {true}; // as panda has internal gravity compensation
         std::string integrator_ {"Euler"};
         drake::math::RigidTransform<double> X_W_base_ {};
         int nx_ {14}; 

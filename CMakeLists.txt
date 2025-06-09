@@ -313,6 +313,26 @@ target_include_directories(linearmpc_controller PUBLIC
         external/cnpy
         )
 
+#################################################################################################
+# Add a simple debug node
+add_executable(u_cmd_test
+               src/upsampled_ucmd_sub_test.cc
+               )
+
+# Link the executable to the required libraries
+target_link_libraries(u_cmd_test
+                      ${catkin_LIBRARIES} 
+                      Eigen3::Eigen 
+                      )
+
+# Add dependencies to ensure proper build order
+add_dependencies(u_cmd_test ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+
+# Include the header files
+target_include_directories(u_cmd_test PUBLIC
+        include
+        )
+
 # Install the executable
 install(TARGETS linearmpc_controller
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

@@ -115,9 +115,10 @@ namespace MPCControllers {
 		VectorX<AutoDiffXd> C(nv);
 		plantAD_ptr_->CalcBiasTerm(*(contextAD_ptr_.get()), &C);
 
-		const auto G = plantAD_ptr_->CalcGravityGeneralizedForces(*(contextAD_ptr_.get()));
+		//const auto G = plantAD_ptr_->CalcGravityGeneralizedForces(*(contextAD_ptr_.get()));
+		//auto ddq = M_inv * (G + x.tail(nu_) - C);
 
-		auto ddq = M_inv * (G + x.tail(nu_) - C);
+		auto ddq = M_inv * (x.tail(nu_) - C); // panda has internal compensation
 		(*y).head(nv) = x.tail(nv);
 		(*y).tail(nv) = ddq;
 	}
@@ -140,10 +141,11 @@ namespace MPCControllers {
 		VectorX<AutoDiffXd> C(nv);
 		plantAD_ptr_->CalcBiasTerm(*(contextAD_ptr_.get()), &C);
 
-		const auto G = plantAD_ptr_->CalcGravityGeneralizedForces(*(contextAD_ptr_.get()));
+		//const auto G = plantAD_ptr_->CalcGravityGeneralizedForces(*(contextAD_ptr_.get()));
+		////auto ddq = M_inv * (G + x.tail(nu_) - C);
+		//auto ddq = M_inv * (G + ui - C);
 
-		//auto ddq = M_inv * (G + x.tail(nu_) - C);
-		auto ddq = M_inv * (G + ui - C);
+		auto ddq = M_inv * (ui - C);
 		//std::cout << "ddq size: " << ddq << std::endl;
 		(*yi).head(nv) = xi.tail(nv);
 		(*yi).tail(nv) = ddq;

@@ -19,7 +19,39 @@ namespace MyControllers
                                         Vector3<double>(0., -0.2, 0.));
 
         // load reference trajectory data
-        data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
+        if (exclude_gravity_from_traj)
+        {
+            auto plant_ptr = std::make_unique<MultibodyPlant<double>>(h_env_);
+            Parser parser(plant_ptr.get());
+            parser.AddModels(panda_file_);
+            const auto& arm_base_frame = plant_ptr->GetFrameByName("panda_link0");
+            plant_ptr->WeldFrames(plant_ptr->world_frame(), arm_base_frame, X_W_base_);
+            plant_ptr->Finalize();
+            auto context_ptr = plant_ptr->CreateDefaultContext();
+
+            //loop to subtract gravity from the reference trajectory
+            data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
+            int N = data_proc_.trajs.at("us").rows();
+            for(int i = 0; i < N; i++)
+            {
+                Eigen::VectorXd qi = data_proc_.trajs.at("q_panda").row(i);
+                //compute G
+                plant_ptr->SetPositions(context_ptr.get(), qi);
+                /* was this in the motion planning: 
+                        u = c - g - M@(v_next - v) 
+                   now:
+                        u = u + g */
+                auto temp = data_proc_.trajs.at("us").row(i).transpose() + plant_ptr->CalcGravityGeneralizedForces(*context_ptr);
+                data_proc_.trajs.at("us").row(i) = temp;
+            }
+        }
+        else {
+            data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
+        }
+        
+
+
+        
 
         //make Q
         Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
@@ -134,7 +166,14 @@ namespace MyControllers
         auto t_now = ros::Time::now();
         Eigen::VectorXd upsampled_u_cmd = u_cmd_spline_copy.value((t_now - mpc_t_start_).toSec());
         // std::cout << "[linearmpc_controller] upsampled_u_cmd: " << upsampled_u_cmd.transpose() << std::endl;
-        
+
+        /*
+        //should not do this! this basically ignores Coriolis
+        Eigen::VectorXd upsampled_u_cmd = Eigen::VectorXd::Zero(7);
+        int active_joint_index = 0;
+        upsampled_u_cmd(0) = u_cmd_spline_copy.value((t_now - mpc_t_start_).toSec())(active_joint_index); 
+        */
+
         std_msgs::Float64MultiArray msg;
         msg.data = std::vector<double>(upsampled_u_cmd.data(), upsampled_u_cmd.data() + upsampled_u_cmd.size());
         upsampled_u_cmd_pub_.publish(msg);
