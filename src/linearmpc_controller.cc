@@ -19,7 +19,7 @@ namespace MyControllers
                                         Vector3<double>(0., -0.2, 0.));
 
         // load reference trajectory data
-        if (exclude_gravity_from_traj)
+        if (exclude_gravity_from_traj_)
         {
             auto plant_ptr = std::make_unique<MultibodyPlant<double>>(h_env_);
             Parser parser(plant_ptr.get());

@@ -68,7 +68,7 @@ namespace MyControllers
         Eigen::MatrixXd latest_mpc_sol_;
 
         std::string panda_file_ {"/home/rosdrake/src/drake_models/franka_description/urdf/panda_arm.urdf"};
-        bool exclude_gravity_from_traj {true}; // as panda has internal gravity compensation
+        bool exclude_gravity_from_traj_ {true}; // as panda has internal gravity compensation
         std::string integrator_ {"Euler"};
         drake::math::RigidTransform<double> X_W_base_ {};
         int nx_ {14}; 
@@ -94,10 +94,14 @@ namespace MyControllers
 
         //member variables related to the reference traj
         int N_ = 60;
-        std::vector<std::string> var_names_ = {"q_panda", "v_panda", "us", "fn", "ft", "v1_post", "w1_post", "h"};
-        std::vector<int> dims_ = {7, 7, 7, 1, 2, 2, 1, 1};
-        std::vector<int> times_ = {N_, N_, N_, 1, 1, 1, 1, N_-1};
-        std::string ref_traj_path_ = "/home/rosdrake/src/src/mpc/traj_refs/1.npy";
+        //std::vector<std::string> var_names_ = {"q_panda", "v_panda", "us", "fn", "ft", "v1_post", "w1_post", "h"};
+        //std::vector<int> dims_ = {7, 7, 7, 1, 2, 2, 1, 1};
+        //std::vector<int> times_ = {N_, N_, N_, 1, 1, 1, 1, N_-1};
+        std::vector<std::string> var_names_ = {"q_panda", "v_panda", "a_panda", "us", "h"};
+        std::vector<int> dims_ = {7, 7, 7, 7, 1};
+        std::vector<int> times_ = {N_, N_, N_, N_, N_-1};
+        //std::string ref_traj_path_ = "/home/rosdrake/src/src/mpc/traj_refs/1.npy";
+        std::string ref_traj_path_ = "/home/rosdrake/src/src/mpc/traj_refs/joint7_traj_N60_tf1.2.npy";
         MyUtils::ProcessedSolution data_proc_; 
 
         /* Now I learnt, using unique_ptr avoids DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN assertion */
