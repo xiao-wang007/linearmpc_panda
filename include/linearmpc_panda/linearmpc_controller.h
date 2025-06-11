@@ -4,6 +4,8 @@
 #include "linear_mpc_prob.h"
 #include <unsupported/Eigen/KroneckerProduct>
 #include <sensor_msgs/JointState.h>
+#include <std_msgs/Bool.h>
+#include <std_srvs/Trigger.h>
 #include <thread>
 #include <atomic>
 #include <chrono>
@@ -57,14 +59,18 @@ namespace MyControllers
         void publish_upsampled_command(const ros::TimerEvent& event);
 
         void joint_state_callback(const sensor_msgs::JointState::ConstPtr& msg);
+
+        void q_init_reached_callback(const std_msgs::Bool::ConstPtr& msg);
     
     private:
         // ROS related member variables
         ros::NodeHandle nh_;
         ros::Publisher upsampled_u_cmd_pub_;
         ros::Publisher q_init_desired_pub_;
-
         ros::Subscriber state_sub_;
+        ros::Subscriber q_init_reached_sub_;
+        ros::ServiceClient move_to_pose_client_;
+
         ros::Time mpc_t_start_;
         Eigen::MatrixXd latest_mpc_sol_;
 
@@ -122,6 +128,8 @@ namespace MyControllers
         std::atomic<bool> received_first_state_ {false}; // Flag to stop the controller thread
         bool mpc_started_ {false}; // Flag to indicate if MPC has started
 
+        std::atomic<bool> q_init_reached_ {false}; // thread-safe flag to indicate if q_init is reached
+        std::atomic<bool> service_called_ {false};
     };
 
 }

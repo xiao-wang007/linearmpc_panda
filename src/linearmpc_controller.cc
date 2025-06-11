@@ -6,10 +6,12 @@ namespace MyControllers
     //###############################################################################
     LinearMPCControllerNode::LinearMPCControllerNode()
     {
+        //subs, pubs and services
         upsampled_u_cmd_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/upsampled_u_cmd", 1);
-
         state_sub_ = nh_.subscribe("/franka_state_controller/joint_states", 1, &LinearMPCControllerNode::joint_state_callback, this);
         upsample_timer_ = nh_.createTimer(ros::Duration(1.0 / executor_frequency_), &LinearMPCControllerNode::publish_upsampled_command, this);
+        q_init_reached_sub_ = nh_.subscribe("/q_init_reached", 1, &LinearMPCControllerNode::q_init_reached_callback, this);
+        move_to_pose_client_ = nh_.serviceClient<std_srvs::Trigger>("move_to_pose");
 
         Nh_ = Nt_ - 1;
         execution_length_ = h_mpc_ * n_exe_steps_;
@@ -155,6 +157,13 @@ namespace MyControllers
     }
 
     //###############################################################################
+    void LinearMPCControllerNode::q_init_reached_callback(const std_msgs::Bool::ConstPtr& msg)
+    {
+        q_init_reached_ = msg->data;
+    }
+
+
+    //###############################################################################
     void LinearMPCControllerNode::publish_upsampled_command(const ros::TimerEvent& event)
     {
         if (!received_first_state_) 
@@ -188,19 +197,24 @@ namespace MyControllers
     //###############################################################################
     void LinearMPCControllerNode::run()
     {
-        //ROS_INFO("Waiting for the simulation to be ready...");
-
-        //while (ros::ok() && !simulation_ready_signal_)
-        //{
-            //nh_.getParam("/simulation_ready", simulation_ready_signal_);
-            //if (!simulation_ready_signal_)
-            //{
-                //std::cout << "Simulation not ready yet, waiting..." << std::endl;
-                //ros::Duration(0.1).sleep(); // Sleep for a short duration to avoid busy-waiting
-            //}
-        //}
-
-        //ROS_INFO("Simulation is ready!");
+        // wait for /q_init_reached to be true
+        ros::Rate rate(10);
+        while (ros::ok() && !q_init_reached_)
+        {
+            if (!service_called_)
+            {   
+                std_srvs::Trigger srv;
+                if (move_to_pose_client_.call(srv))
+                {
+                    ROS_INFO_STREAM("Called move_to_pose service: " << srv.response.message);
+                    service_called_ = true; 
+                } else {
+                    ROS_WARN("Failed to call move_to_pose service, retrying...");
+                }
+            }
+            ros::spinOnce();
+            rate.sleep();
+        }
 
         //start solver in a separate thread
         std::thread solver_thread (
@@ -231,7 +245,6 @@ namespace MyControllers
         );
 
         //set a flag here to start spin when sim node starts to publish joint states
-
         ros::spin(); // spin here as solve_and_update() is called in a separate thread
 
         // ros::spin() blocks this, then prints when ros is shutdown
