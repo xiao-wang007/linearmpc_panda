@@ -16,11 +16,11 @@ ros::Publisher traj_pub;
 
 //###############################################################################################
 //sub callback to fetch the q_init_desired
-void q_init_desired_callback(const std_msgs::Float64MultiArray::ConstPtr& msg) 
+void q_init_desired_callback(const sensor_msgs::JointState::ConstPtr& msg) 
 {
-  if (msg->data.size() == 7) 
+  if (msg->position.size() == 7) 
   {
-    latest_q_init_desired = Eigen::Map<const Eigen::VectorXd>(msg->data.data(), msg->data.size());
+    latest_q_init_desired = Eigen::Map<const Eigen::VectorXd>(msg->position.data(), msg->position.size());
     q_init_desired_received = true;
     ROS_INFO("Received initial desired joint positions: \n %s", latest_q_init_desired.transpose().c_str());
   } else {

@@ -62,6 +62,7 @@ namespace MyControllers
         // ROS related member variables
         ros::NodeHandle nh_;
         ros::Publisher upsampled_u_cmd_pub_;
+        ros::Publisher q_init_desired_pub_;
 
         ros::Subscriber state_sub_;
         ros::Time mpc_t_start_;

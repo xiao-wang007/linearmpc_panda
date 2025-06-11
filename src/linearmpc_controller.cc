@@ -48,10 +48,16 @@ namespace MyControllers
         else {
             data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
         }
-        
 
-
-        
+        //Publish q_init_desired to be used for checking if robot is ready 
+        q_init_desired_pub_ = nh_.advertise<sensor_msgs::JointState>("/q_init_desired", 1, true);
+        auto q_init_desired = data_proc_.trajs.at("q_panda").row(0);
+        sensor_msgs::JointState q_init_desired_msg;
+        q_init_desired_msg.name = {"panda_joint1", "panda_joint2", "panda_joint3", 
+                                   "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"};
+        q_init_desired_msg.position = std::vector<double>(q_init_desired.data(), q_init_desired.data() + q_init_desired.size());
+        q_init_desired_pub_.publish(q_init_desired_msg);
+        ROS_INFO_STREAM("Published initial desired joint state: " << q_init_desired);
 
         //make Q
         Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
