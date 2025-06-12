@@ -10,7 +10,7 @@ namespace MyControllers
         upsampled_u_cmd_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("/upsampled_u_cmd", 1);
         state_sub_ = nh_.subscribe("/franka_state_controller/joint_states", 1, &LinearMPCControllerNode::joint_state_callback, this);
         upsample_timer_ = nh_.createTimer(ros::Duration(1.0 / executor_frequency_), &LinearMPCControllerNode::publish_upsampled_command, this);
-        q_init_reached_sub_ = nh_.subscribe("/q_init_reached", 1, &LinearMPCControllerNode::q_init_reached_callback, this);
+        //q_init_reached_sub_ = nh_.subscribe("/q_init_reached", 1, &LinearMPCControllerNode::q_init_reached_callback, this);
         move_to_pose_client_ = nh_.serviceClient<std_srvs::Trigger>("move_to_pose");
 
         Nh_ = Nt_ - 1;
@@ -51,15 +51,18 @@ namespace MyControllers
             data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
         }
 
+        //get q_init_desired
+        q_init_desired_ = data_proc_.trajs.at("q_panda").row(0);
+
         //Publish q_init_desired to be used for checking if robot is ready 
-        q_init_desired_pub_ = nh_.advertise<sensor_msgs::JointState>("/q_init_desired", 1, true);
-        auto q_init_desired = data_proc_.trajs.at("q_panda").row(0);
-        sensor_msgs::JointState q_init_desired_msg;
-        q_init_desired_msg.name = {"panda_joint1", "panda_joint2", "panda_joint3", 
-                                   "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"};
-        q_init_desired_msg.position = std::vector<double>(q_init_desired.data(), q_init_desired.data() + q_init_desired.size());
-        q_init_desired_pub_.publish(q_init_desired_msg);
-        ROS_INFO_STREAM("Published initial desired joint state: " << q_init_desired);
+        //q_init_desired_pub_ = nh_.advertise<sensor_msgs::JointState>("/q_init_desired", 1, true);
+        //auto q_init_desired = data_proc_.trajs.at("q_panda").row(0);
+        //sensor_msgs::JointState q_init_desired_msg;
+        //q_init_desired_msg.name = {"panda_joint1", "panda_joint2", "panda_joint3", 
+                                   //"panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"};
+        //q_init_desired_msg.position = std::vector<double>(q_init_desired.data(), q_init_desired.data() + q_init_desired.size());
+        //q_init_desired_pub_.publish(q_init_desired_msg);
+        //ROS_INFO_STREAM("Published initial desired joint state: " << q_init_desired);
 
         //make Q
         Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
@@ -157,10 +160,10 @@ namespace MyControllers
     }
 
     //###############################################################################
-    void LinearMPCControllerNode::q_init_reached_callback(const std_msgs::Bool::ConstPtr& msg)
-    {
-        q_init_reached_ = msg->data;
-    }
+    //void LinearMPCControllerNode::q_init_reached_callback(const std_msgs::Bool::ConstPtr& msg)
+    //{
+        //q_init_reached_ = msg->data;
+    //}
 
 
     //###############################################################################
@@ -212,8 +215,22 @@ namespace MyControllers
                     ROS_WARN("Failed to call move_to_pose service, retrying...");
                 }
             }
+
+            q_init_reached_ = initial_pose_reached(); // check if the robot is at the desired initial pose
+            if (q_init_reached_)
+            {
+                ROS_INFO("Robot is at the desired initial pose, starting MPC...*********************************");
+                break;
+            }
+
             ros::spinOnce();
             rate.sleep();
+        }
+
+        if (!ros::ok()) 
+        {
+            ROS_WARN("ROS shutdown requested before reaching initial pose.");
+            return;
         }
 
         //start solver in a separate thread
@@ -247,11 +264,43 @@ namespace MyControllers
         //set a flag here to start spin when sim node starts to publish joint states
         ros::spin(); // spin here as solve_and_update() is called in a separate thread
 
-        // ros::spin() blocks this, then prints when ros is shutdown
-        std::cout << "done spin() in MPCSolverNode::run()." << std::endl;
+        // 4. Clean shutdown
+        if (solver_thread.joinable()) 
+        {
+            solver_thread.join();
+        }
 
-        solver_thread.join(); // Wait for the solver thread to finish
+        std::cout << "LinearMPCControllerNode::run() finished cleanly." << std::endl;
     }
+
+    //###############################################################################
+    bool LinearMPCControllerNode::initial_pose_reached() 
+	{
+		// Check if the current robot state is close to the desired initial pose
+		const double threshold = 0.1; // Adjust this threshold as needed
+
+        Eigen::VectorXd local_q_now, local_v_now;
+        {
+            std::lock_guard<std::mutex> lock(state_mutex_);
+            local_q_now = q_now_;
+            local_v_now = v_now_;
+        } // lock release when go out of this scope
+
+		if ((local_q_now - q_init_desired_).norm() > threshold) 
+		{
+			ROS_WARN("Current robot state is not close to the desired initial pose.");
+			return false;
+		}
+		else if ((local_q_now - q_init_desired_).norm() < threshold)
+		{
+			ROS_INFO("Current robot state is close to the desired initial pose.");
+			return true;
+		}
+
+		ROS_INFO("Current robot state is exactly at the threshold.");
+		return true;  // or false, depending on your logic
+	}
+
 }
 
 int main(int argc, char** argv)

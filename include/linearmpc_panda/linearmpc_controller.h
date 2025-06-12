@@ -60,15 +60,17 @@ namespace MyControllers
 
         void joint_state_callback(const sensor_msgs::JointState::ConstPtr& msg);
 
-        void q_init_reached_callback(const std_msgs::Bool::ConstPtr& msg);
+        //void q_init_reached_callback(const std_msgs::Bool::ConstPtr& msg);
+
+        bool initial_pose_reached();
     
     private:
         // ROS related member variables
         ros::NodeHandle nh_;
         ros::Publisher upsampled_u_cmd_pub_;
-        ros::Publisher q_init_desired_pub_;
         ros::Subscriber state_sub_;
-        ros::Subscriber q_init_reached_sub_;
+        //ros::Publisher q_init_desired_pub_;
+        //ros::Subscriber q_init_reached_sub_;
         ros::ServiceClient move_to_pose_client_;
 
         ros::Time mpc_t_start_;
@@ -130,6 +132,7 @@ namespace MyControllers
 
         std::atomic<bool> q_init_reached_ {false}; // thread-safe flag to indicate if q_init is reached
         std::atomic<bool> service_called_ {false};
+        Eigen::VectorXd q_init_desired_ {Eigen::VectorXd::Zero(NUM_JOINTS)}; // Desired initial pose
     };
 
 }
