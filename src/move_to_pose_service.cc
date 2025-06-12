@@ -22,16 +22,16 @@ void q_init_desired_callback(const sensor_msgs::JointState::ConstPtr& msg)
   {
     latest_q_init_desired = Eigen::Map<const Eigen::VectorXd>(msg->position.data(), msg->position.size());
     q_init_desired_received = true;
-    ROS_INFO("Received initial desired joint positions: \n %s", latest_q_init_desired.transpose().c_str());
+    ROS_INFO_STREAM("Received initial desired joint positions: " << latest_q_init_desired.transpose());
   } else {
-    ROS_WARN("Received invalid joint positions data size: %zu", msg->data.size());
+    ROS_INFO_STREAM("Received invalid joint positions data size: " << msg->position.size());
   }
 }
 
 //###############################################################################################
 bool move_to_pose_service(std_srvs::Trigger::Request&, std_srvs::Trigger::Response& res) 
 {
-  if (!q_desired_received) 
+  if (!q_init_desired_received) 
   {
     res.success = false;
     res.message = "No desired q received yet.";
@@ -111,7 +111,10 @@ int main(int argc, char** argv)
   //sub to get q_init_desired
   ros::Subscriber q_init_desired_sub = nh.subscribe("/q_init_desired", 10, q_init_desired_callback);
 
-  ros::Publisher traj_pub = nh.advertise<trajectory_msgs::JointTrajectory>(
+  std::cout << "q_init_desired: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" << latest_q_init_desired.transpose() << std::endl;
+
+
+  traj_pub = nh.advertise<trajectory_msgs::JointTrajectory>(
       "/position_joint_trajectory_controller/command", 10);
 
   //advertise the service

@@ -293,7 +293,7 @@ install(TARGETS move_to_pose
 #################################################################################################
 # Add move_to_pose_service node
 add_executable(move_to_pose_service
-               src/move_to_pose.cc
+               src/move_to_pose_service.cc
                )
 
 # Link the executable to the required libraries

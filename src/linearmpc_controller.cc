@@ -33,6 +33,9 @@ namespace MyControllers
 
             //loop to subtract gravity from the reference trajectory
             data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
+            //std::cout << "data_proc_.trajs.at('q_panda').row(0): " << data_proc_.trajs.at("q_panda").row(1) << std::endl;
+            //std::cout << "data_proc_.trajs.at('q_panda') of shape: " << data_proc_.trajs.at("q_panda").rows() << "x" 
+                      //<< data_proc_.trajs.at("q_panda").cols() << std::endl;
             int N = data_proc_.trajs.at("us").rows();
             for(int i = 0; i < N; i++)
             {
@@ -51,18 +54,24 @@ namespace MyControllers
             data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
         }
 
-        //get q_init_desired
-        q_init_desired_ = data_proc_.trajs.at("q_panda").row(0);
+        /* If data_proc_.trajs.at("q_panda") is an Eigen::MatrixXd, then .row(0) returns an Eigen 
+        row vector of type Eigen::Matrix<double, 1, Eigen::Dynamic>. If you assign this directly 
+        to an Eigen::VectorXd, it can cause all elements to be set to the first value (due to 
+        Eigen's implicit conversion rules).*/
+        //get q_init_desired!!! 
+        q_init_desired_ = data_proc_.trajs.at("q_panda").row(0).transpose();
 
-        //Publish q_init_desired to be used for checking if robot is ready 
-        //q_init_desired_pub_ = nh_.advertise<sensor_msgs::JointState>("/q_init_desired", 1, true);
-        //auto q_init_desired = data_proc_.trajs.at("q_panda").row(0);
-        //sensor_msgs::JointState q_init_desired_msg;
-        //q_init_desired_msg.name = {"panda_joint1", "panda_joint2", "panda_joint3", 
-                                   //"panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"};
-        //q_init_desired_msg.position = std::vector<double>(q_init_desired.data(), q_init_desired.data() + q_init_desired.size());
-        //q_init_desired_pub_.publish(q_init_desired_msg);
-        //ROS_INFO_STREAM("Published initial desired joint state: " << q_init_desired);
+        std::cout << "inside init() q_init_desired_: " << q_init_desired_.transpose() << std::endl;
+
+        //Publish q_init_desired to be used in move_to_pose service
+        q_init_desired_pub_ = nh_.advertise<sensor_msgs::JointState>("/q_init_desired", 1, true);
+        //std::cout << "q_init_desired: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" << q_init_desired_.transpose() << std::endl;
+        sensor_msgs::JointState q_init_desired_msg;
+        q_init_desired_msg.name = {"panda_joint1", "panda_joint2", "panda_joint3", 
+                                   "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"};
+        q_init_desired_msg.position = std::vector<double>(q_init_desired_.data(), q_init_desired_.data() + q_init_desired_.size());
+        q_init_desired_pub_.publish(q_init_desired_msg);
+        ROS_INFO_STREAM("Published initial desired joint state: " << q_init_desired_);
 
         //make Q
         Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
@@ -108,7 +117,6 @@ namespace MyControllers
         if (!received_first_state_)
         {
             received_first_state_ = true; // Set the flag to true after receiving the first state
-            ROS_INFO("Received first joint state from simulation.");
             ROS_INFO_STREAM("Current joint positions: " << q_now_.transpose());
             ROS_INFO_STREAM("Current joint velocities: " << v_now_.transpose());
             auto wall_time = ros::WallTime::now();
@@ -200,19 +208,38 @@ namespace MyControllers
     //###############################################################################
     void LinearMPCControllerNode::run()
     {
-        // wait for /q_init_reached to be true
         ros::Rate rate(10);
+
+        while (ros::ok() && !received_first_state_)
+        {
+            ROS_WARN_THROTTLE(2.0, "Waiting for first joint state before checking initial pose...");
+            ros::spinOnce();
+            rate.sleep();
+        }
+        
+        // wait for /q_init_reached to be true
         while (ros::ok() && !q_init_reached_)
         {
             if (!service_called_)
             {   
+                std::cout << "checking if move_to_pose service is available..." << std::endl;
                 std_srvs::Trigger srv;
                 if (move_to_pose_client_.call(srv))
                 {
+                  if (srv.response.success)
+                  {  
                     ROS_INFO_STREAM("Called move_to_pose service: " << srv.response.message);
                     service_called_ = true; 
-                } else {
+                  }
+                  else
+                  {
                     ROS_WARN("Failed to call move_to_pose service, retrying...");
+                  }
+                } 
+
+                else 
+                {
+                  ROS_WARN("Failed to call move_to_pose service, retrying...");
                 }
             }
 
@@ -277,7 +304,7 @@ namespace MyControllers
     bool LinearMPCControllerNode::initial_pose_reached() 
 	{
 		// Check if the current robot state is close to the desired initial pose
-		const double threshold = 0.1; // Adjust this threshold as needed
+		const double threshold = 0.01; // Adjust this threshold as needed
 
         Eigen::VectorXd local_q_now, local_v_now;
         {
@@ -285,6 +312,10 @@ namespace MyControllers
             local_q_now = q_now_;
             local_v_now = v_now_;
         } // lock release when go out of this scope
+        std::cout << "local_q_now: " << local_q_now.transpose() << std::endl;
+
+
+        //std::cout << "q_init_desired_: " << q_init_desired_.transpose() << std::endl;
 
 		if ((local_q_now - q_init_desired_).norm() > threshold) 
 		{

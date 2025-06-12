@@ -69,7 +69,7 @@ namespace MyControllers
         ros::NodeHandle nh_;
         ros::Publisher upsampled_u_cmd_pub_;
         ros::Subscriber state_sub_;
-        //ros::Publisher q_init_desired_pub_;
+        ros::Publisher q_init_desired_pub_;
         //ros::Subscriber q_init_reached_sub_;
         ros::ServiceClient move_to_pose_client_;
 
@@ -106,10 +106,10 @@ namespace MyControllers
         //std::vector<std::string> var_names_ = {"q_panda", "v_panda", "us", "fn", "ft", "v1_post", "w1_post", "h"};
         //std::vector<int> dims_ = {7, 7, 7, 1, 2, 2, 1, 1};
         //std::vector<int> times_ = {N_, N_, N_, 1, 1, 1, 1, N_-1};
+        //std::string ref_traj_path_ = "/home/rosdrake/src/src/mpc/traj_refs/1.npy";
         std::vector<std::string> var_names_ = {"q_panda", "v_panda", "a_panda", "us", "h"};
         std::vector<int> dims_ = {7, 7, 7, 7, 1};
         std::vector<int> times_ = {N_, N_, N_, N_, N_-1};
-        //std::string ref_traj_path_ = "/home/rosdrake/src/src/mpc/traj_refs/1.npy";
         std::string ref_traj_path_ = "/home/rosdrake/src/src/mpc/traj_refs/joint7_traj_N60_tf1.2.npy";
         MyUtils::ProcessedSolution data_proc_; 
 
