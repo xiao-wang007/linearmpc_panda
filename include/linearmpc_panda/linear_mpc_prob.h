@@ -49,9 +49,13 @@ namespace MPCControllers{
 					  Eigen::MatrixXd Q,
 					  Eigen::MatrixXd R,
 					  Eigen::MatrixXd P,
-					  const PiecewisePolynomial<double>& x_ref_spline,
-					  const PiecewisePolynomial<double>& u_ref_spline,
-					  const std::vector<int>& u_entries={});
+					  const MyUtils::ProcessedSolution& processed_refTraj,
+					  //const PiecewisePolynomial<double>& x_ref_spline,
+					  //const PiecewisePolynomial<double>& u_ref_spline,
+					  const Eigen::VectorXd& u_bounds,
+					  const Eigen::VectorXd& x_bounds, 
+					  const Eigen::VectorXd& u_entries=Eigen::VectorXd(), // indices for selective constraints on du 
+					  const Eigen::VectorXd& x_entries=Eigen::VectorXd()); // indices for selective constraints on dx
 	    ~LinearMPCProb();
 		 
 		//In Eigen, when you want to pass an Eigen vector by reference (to avoid copying) 
@@ -112,13 +116,17 @@ namespace MPCControllers{
 		Eigen::MatrixXd R_;
 		Eigen::MatrixXd P_;
 		//Eigen::VectorXd udot_up_ = {1000, 1000, 1000, 1000, 1000, 1000, 1000};
+		Eigen::VectorXd x_bounds_;
+		Eigen::VectorXd u_bounds_;
 		Eigen::VectorXd udot_up_; 
 		Eigen::VectorXd udot_low_; 
 		AutoDiffVecXd f_grad_;
-		PiecewisePolynomial<double> x_ref_spline_;
-		PiecewisePolynomial<double> u_ref_spline_;
+		MyUtils::ProcessedSolution processed_refTraj_;
+		//PiecewisePolynomial<double> x_ref_spline_;
+		//PiecewisePolynomial<double> u_ref_spline_;
 
-		std::vector<int> u_entries_;
+		Eigen::VectorXd u_entries_;
+		Eigen::VectorXd x_entries_;
 		std::unique_ptr<MultibodyPlant<double>> plant_ptr_;
 		std::unique_ptr<Context<double>> context_ptr_;
 		std::unique_ptr<MultibodyPlant<AutoDiffXd>> plantAD_ptr_;

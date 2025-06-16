@@ -15,12 +15,17 @@ namespace MPCControllers {
 						  		 Eigen::MatrixXd Q,
 						  		 Eigen::MatrixXd R,
 						  		 Eigen::MatrixXd P,
-								 const PiecewisePolynomial<double>& x_ref_spline,
-								 const PiecewisePolynomial<double>& u_ref_spline,
-				  				 const std::vector<int>& u_entries)
+								 const MyUtils::ProcessedSolution& processed_refTraj,
+								 //const PiecewisePolynomial<double>& x_ref_spline,
+								 //const PiecewisePolynomial<double>& u_ref_spline,
+				  				 const Eigen::VectorXd& u_entries,
+								 const Eigen::VectorXd& x_entries,
+								 const Eigen::VectorXd& u_bounds,
+								 const Eigen::VectorXd& x_bounds)
 		  : nx_(nx), nu_(nu), h_mpc_(h_mpc), h_env_(h_env), Nt_(Nt), 
 		    Nh_(Nt - 1), execution_length_(execution_length), Q_(Q), R_(R), P_(P),
-			x_ref_spline_(x_ref_spline), u_ref_spline_(u_ref_spline), integrator_name_(integrator)
+			processed_refTraj_(processed_refTraj), integrator_name_(integrator),
+			u_entries_(u_entries), x_entries_(x_entries), u_bounds_(u_bounds), x_bounds_(x_bounds)
 	{ 
 		mpc_horizon_ = h_mpc_ * Nh_;
 		/*make the plant for the controller with arm only, 
@@ -40,6 +45,11 @@ namespace MPCControllers {
 		//
 		udot_up_ = Eigen::VectorXd::Constant(nu_, 1000.0);
 		udot_low_ = -udot_up_;
+
+		// compute dx & du bounds using x&u bounds and x_ref&u_ref
+		build bounds for dx and xu
+
+
 
 		//initialize the prog
 		nDecVar_ = Nh_ * (nx_ + nu_);
@@ -81,17 +91,32 @@ namespace MPCControllers {
 
 		// set up the constraints
 		C_cols_ = Nh_ * (nx_ + nu_);
-
-		if (u_entries_.size() == 0)
-		{
-			C_rows_ = Nh_ * nx_;
-		} else {
-			C_rows_ = Nh_*nx_ + Nh_*nu_;
-		}
+		C_rows_ = Nh_*nx_ + Nh_*nu_ + Nh_*nx_;
 
 		C_ = Eigen::MatrixXd::Zero(C_rows_, C_cols_);
 		C_.block(0, nu_, nx_, nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
-		std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% here checking" << std::endl;
+
+		// create matrix to select du & dx
+		Eigen::MatrixXd u_block(nu_, nu_ + nx_);
+		Eigen::MatrixXd x_block(nx_, nu_ + nx_);
+		u_block.setZero();
+		x_block.setZero();
+		u_block.leftCols(nu_) = u_entries_.asDiagonal();
+		x_block.leftCols(nu_) = x_entries_.asDiagonal();
+
+		Eigen::MatrixXd u_selected = Eigen::MatrixXd::Zero(Nh_*nu_, Nh_*(nu_+nx_));
+		Eigen::MatrixXd x_selected = Eigen::MatrixXd::Zero(Nh_*nx_, Nh_*(nu_+nx_));
+		for (int i = 0; i < Nh_; ++i) 
+		{
+			u_selected.block(i * nu_, i * (nu_ + nx_), nu_, nu_ + nx_) = u_block;
+			x_selected.block(i * nx_, i * (nu_ + nx_), nx_, nu_ + nx_) = x_block;
+		}
+
+		// put u_selected and x_selected into C_
+		C_.block(Nh_*nx_,       0, Nh_*nu_, C_cols_) = u_selected;
+		C_.block(Nh_*(nx_+nu_), 0, Nh_*nx_, C_cols_) = x_selected;
+
+		std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% here checking in LinearMPCProb() init" << std::endl;
 
 		lb_ = Eigen::VectorXd::Zero(C_rows_);
 		ub_ = Eigen::VectorXd::Zero(C_rows_);
@@ -362,8 +387,10 @@ namespace MPCControllers {
 	{
 		//query the spline using current time
 		auto ts_mpc = Eigen::VectorXd::LinSpaced(Nt_, t_now, t_now + mpc_horizon_);
-		auto x_ref_horizon = x_ref_spline_.vector_values(ts_mpc);
-		auto u_ref_horizon = u_ref_spline_.vector_values(ts_mpc);
+
+ 		/* There may be a time offset? can the robot keep up? */
+		auto x_ref_horizon = processed_refTraj_.x_ref_spline.vector_values(ts_mpc);
+		auto u_ref_horizon = processed_refTraj_.u_ref_spline.vector_values(ts_mpc);
 
 		assert(x_ref_horizon.cols() == Nt_ && "x_ref_horizon dim is wrong!");
 		assert(u_ref_horizon.cols() == Nt_ && "u_ref_horizon dim is wrong!");
