@@ -27,8 +27,9 @@ namespace MPCControllers {
 		  : nx_(nx), nu_(nu), h_mpc_(h_mpc), h_env_(h_env), Nt_(Nt), 
 		    Nh_(Nt - 1), execution_length_(execution_length), Q_(Q), R_(R), P_(P),
 			processed_refTraj_(processed_refTraj), integrator_name_(integrator),
-			u_entries_(u_entries), x_entries_(x_entries), u_up_(u_up_), u_low_(u_low_), x_up_(x_up), x_low_(x_low)
+			u_entries_(u_entries), x_entries_(x_entries), u_up_(u_up), u_low_(u_low), x_up_(x_up), x_low_(x_low)
 	{ 
+		std::cout << "checking in linear_mpc_prob.cc constructor 1" << std::endl;
 		mpc_horizon_ = h_mpc_ * Nh_;
 		/*make the plant for the controller with arm only, 
 		  no need to weld the finger and set the base pose as only joint space,
@@ -64,6 +65,8 @@ namespace MPCControllers {
 		//TO DO: custom cst and costs bindings
 		// https://stackoverflow.com/questions/65860331/could-you-demo-a-very-simple-c-example-about-symbolic-variable-and-jacobian-by
 		// AN EXAMPLE OF cost and cst bindings
+
+		std::cout << "checking in linear_mpc_prob.cc constructor 2" << std::endl;
 		
 		// add cost integral cost
 		for (int i = 0; i < Nh_ - 1; ++i)
@@ -93,13 +96,18 @@ namespace MPCControllers {
 		C_ = Eigen::MatrixXd::Zero(C_rows_, C_cols_);
 		C_.block(0, nu_, nx_, nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
 
+		std::cout << "checking in linear_mpc_prob.cc constructor 3" << std::endl;
 		// create matrix to select du & dx
 		Eigen::MatrixXd u_block(nu_, nu_ + nx_);
 		Eigen::MatrixXd x_block(nx_, nu_ + nx_);
 		u_block.setZero();
 		x_block.setZero();
-		u_block.leftCols(nu_) = u_entries_.asDiagonal();
-		x_block.leftCols(nu_) = x_entries_.asDiagonal();
+		/*.leftCols() return a view, not a resisable object */
+		//u_block.leftCols(nu_) = u_entries_.asDiagonal();
+		//x_block.leftCols(nx_) = x_entries_.asDiagonal();
+		u_block.block(0, 0, nu_, nu_) = u_entries_.asDiagonal();
+		x_block.block(0, 0, nx_, nx_) = x_entries_.asDiagonal();
+		std::cout << "checking in linear_mpc_prob.cc constructor 4" << std::endl;
 
 		Eigen::MatrixXd u_selected = Eigen::MatrixXd::Zero(Nh_*nu_, Nh_*(nu_+nx_));
 		Eigen::MatrixXd x_selected = Eigen::MatrixXd::Zero(Nh_*nx_, Nh_*(nu_+nx_));

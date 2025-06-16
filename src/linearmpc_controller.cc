@@ -25,10 +25,12 @@ namespace MyControllers
         u_low_ << -87., -87., -87., -87., -12., -12., -12.;
 
         x_up_.resize(nx_);
-        x_up_ << 2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973;
+        x_up_ << 2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973, 2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61;
 
         x_low_.resize(nx_);
-        x_low_ << -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973;
+        x_low_ << -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973, -2.1750, -2.1750, -2.1750, -2.1750, -2.61, -2.61, -2.61;
+
+        std::cout << "checking here then 1 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 
         x_entries_ = Eigen::VectorXd::Ones(nx_);
         u_entries_ = Eigen::VectorXd::Ones(nu_);
@@ -67,8 +69,11 @@ namespace MyControllers
             }
         }
         else {
+            std::cout << "checking here then 1.5 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
             data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
         }
+
+        std::cout << "checking here then 1.5 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 
         /* If data_proc_.trajs.at("q_panda") is an Eigen::MatrixXd, then .row(0) returns an Eigen 
         row vector of type Eigen::Matrix<double, 1, Eigen::Dynamic>. If you assign this directly 
@@ -89,6 +94,8 @@ namespace MyControllers
         q_init_desired_pub_.publish(q_init_desired_msg);
         ROS_INFO_STREAM("Published initial desired joint state: " << q_init_desired_);
 
+        std::cout << "checking here then 2 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+
         //make Q
         Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
         Eigen::VectorXd v_coef = Eigen::VectorXd::Constant(nu_, 1.) * 0.1;
@@ -107,9 +114,11 @@ namespace MyControllers
 
         /* have to do this to avoid DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN() assertion as 
             I have a MultibodyPlant() inside LinearMPCProb()*/
+        std::cout << "checking here then 3 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
         prob_ = std::make_unique<MPCControllers::LinearMPCProb>(panda_file_, integrator_, nx_, nu_, execution_length_, 
                                                             h_mpc_, h_env_, Nt_, X_W_base_, Q_, R_, P_, 
                                                             data_proc_, u_up_, u_low_, x_up_, x_low_, u_entries_, x_entries_); 
+        std::cout << "checking here then 4 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 
         //init solver output
         latest_mpc_sol_ = Eigen::MatrixXd::Zero(nu_, Nt_);
