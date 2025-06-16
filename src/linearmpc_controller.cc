@@ -158,7 +158,7 @@ namespace MyControllers
         auto current_time = (t_now - mpc_t_start_).toSec();
         std::cout << "[linearmpc_controller] time lapsed since node started: " << current_time << std::endl;
 
-        prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, current_time); // takes 0.22~2.45s
+        prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, current_time); // takes 0.22~0.245s
 
         prob_->Get_solution(latest_mpc_sol_); //Pass by argument
         std::cout << "[linearmpc_controller] latest_mpc_sol_: \n" << latest_mpc_sol_ << std::endl;
