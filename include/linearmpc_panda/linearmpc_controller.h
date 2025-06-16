@@ -97,10 +97,16 @@ namespace MyControllers
         Eigen::MatrixXd Q_;
         Eigen::MatrixXd R_;
         Eigen::MatrixXd P_;
-        Eigen::VectorXd udot_up_ {Eigen::VectorXd::Constant(nu_, 1000.0)}; 
-        Eigen::VectorXd udot_low_ {-udot_up_}; 
-        Eigen::MatrixXd xref_now_ {};
-        Eigen::MatrixXd uref_now_ {};
+        Eigen::VectorXd u_up_ {};
+        Eigen::VectorXd u_low_{};
+        Eigen::VectorXd x_up_ {};
+        Eigen::VectorXd x_low_ {};
+        Eigen::VectorXd u_entries_ {}; // indices for selective constraints on du
+        Eigen::VectorXd x_entries_ {}; // indices for selective constraints on dx
+        //Eigen::VectorXd udot_up_ {Eigen::VectorXd::Constant(nu_, 1000.0)}; 
+        //Eigen::VectorXd udot_low_ {-udot_up_}; 
+        //Eigen::MatrixXd xref_now_ {};
+        //Eigen::MatrixXd uref_now_ {};
         Eigen::Matrix<double, NUM_JOINTS, 1> q_now_ {};
         Eigen::Matrix<double, NUM_JOINTS, 1> v_now_ {};
         Eigen::Matrix<double, NUM_JOINTS, 1> u_now_ {};

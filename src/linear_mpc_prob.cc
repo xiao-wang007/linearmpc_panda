@@ -18,14 +18,16 @@ namespace MPCControllers {
 								 const MyUtils::ProcessedSolution& processed_refTraj,
 								 //const PiecewisePolynomial<double>& x_ref_spline,
 								 //const PiecewisePolynomial<double>& u_ref_spline,
+								 const Eigen::VectorXd& u_up,
+								 const Eigen::VectorXd& u_low,
+								 const Eigen::VectorXd& x_up,
+								 const Eigen::VectorXd& x_low,
 				  				 const Eigen::VectorXd& u_entries,
-								 const Eigen::VectorXd& x_entries,
-								 const Eigen::VectorXd& u_bounds,
-								 const Eigen::VectorXd& x_bounds)
+								 const Eigen::VectorXd& x_entries)
 		  : nx_(nx), nu_(nu), h_mpc_(h_mpc), h_env_(h_env), Nt_(Nt), 
 		    Nh_(Nt - 1), execution_length_(execution_length), Q_(Q), R_(R), P_(P),
 			processed_refTraj_(processed_refTraj), integrator_name_(integrator),
-			u_entries_(u_entries), x_entries_(x_entries), u_bounds_(u_bounds), x_bounds_(x_bounds)
+			u_entries_(u_entries), x_entries_(x_entries), u_up_(u_up_), u_low_(u_low_), x_up_(x_up), x_low_(x_low)
 	{ 
 		mpc_horizon_ = h_mpc_ * Nh_;
 		/*make the plant for the controller with arm only, 
@@ -45,11 +47,6 @@ namespace MPCControllers {
 		//
 		udot_up_ = Eigen::VectorXd::Constant(nu_, 1000.0);
 		udot_low_ = -udot_up_;
-
-		// compute dx & du bounds using x&u bounds and x_ref&u_ref
-		build bounds for dx and xu
-
-
 
 		//initialize the prog
 		nDecVar_ = Nh_ * (nx_ + nu_);
@@ -320,9 +317,7 @@ namespace MPCControllers {
 				AutoDiffVecXd*)>
 	void LinearMPCProb::Build_C_d_for_solver_errCoord(const Eigen::VectorXd& x0,
 									   const Eigen::Ref<Eigen::MatrixXd>& x_ref,
-									   const Eigen::Ref<Eigen::MatrixXd>& u_ref,
-									   const Eigen::VectorXd dudt_up,
-									   const Eigen::VectorXd dudt_low)
+									   const Eigen::Ref<Eigen::MatrixXd>& u_ref)
 	{
 		/* x_ref, u_ref are of Eigen::Matrix<Autodiff, m, n> */
 		//Continue here!
@@ -370,16 +365,38 @@ namespace MPCControllers {
 
 		//MyUtils::VisualizeMatSparsity(C_);
 
-		if (u_entries_.size() == 0)
+		//if (u_entries_.size() == 0)
+		//{
+			//lb_.head(nx_) = init;
+			//ub_.head(nx_) = init;
+		//} else {
+			//lb_.head(nx_ + nu_) = init;
+			//lb_.tail(Nh_ * nu_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), udot_low_);
+			//ub_.head(nx_ + nu_) = init;
+			//ub_.tail(Nh_ * nu_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), udot_up_);
+		//}
+		
+		lb_.head(nx_) = init;
+		ub_.head(nx_) = init;
+
+		////index for du
+		//lb_.segment(Nh_*nx_, Nh_*nu_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), );
+		//ub_.segment(Nh_*nx_, Nh_*nu_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), );
+		//lb_.tail(Nh_ * nx_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), );
+		//ub_.tail(Nh_ * nx_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), );
+
+		// index for du & dx
+		for (int i = 0; i < Nh_; i++)
 		{
-			lb_.head(nx_) = init;
-			ub_.head(nx_) = init;
-		} else {
-			lb_.head(nx_ + nu_) = init;
-			lb_.tail(Nh_ * nu_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), udot_low_);
-			ub_.head(nx_ + nu_) = init;
-			ub_.tail(Nh_ * nu_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), udot_up_);
+			// for du
+			lb_.segment(Nh_*nx_ + i*nu_, nu_) = (u_low_ - u_ref_.col(i)) / h_mpc_; // approx for +du/dt
+			ub_.segment(Nh_*nx_ + i*nu_, nu_) = (u_up_ - u_ref_.col(i)) / h_mpc_; // approx for -du/dt
+
+			// for dx
+			lb_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_low_- x_ref_.col(i)) / h_mpc; // approx for +dx/dt
+			ub_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_up_ - x_ref_.col(i)) / h_mpc; // approx for -dx/dt
 		}
+
 	}
 	//######################################################################################
 	void LinearMPCProb::Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
@@ -398,14 +415,12 @@ namespace MPCControllers {
 		if (integrator_name_ == "Euler")
 		{
 			this->Build_C_d_for_solver_errCoord<&LinearMPCProb::Euler>(current_state, 
-																x_ref_horizon, u_ref_horizon,
-																udot_up_, udot_low_);
+																x_ref_horizon, u_ref_horizon);
 		} 
 		else if (integrator_name_ == "RK4") 
 		{
 		    this->Build_C_d_for_solver_errCoord<&LinearMPCProb::RK4>(current_state, 
-																x_ref_horizon, u_ref_horizon,
-																udot_up_, udot_low_);
+																x_ref_horizon, u_ref_horizon);
 		}
 
 		// evaluator() returns a shared_ptr<LinearConstraint>
@@ -453,12 +468,10 @@ namespace MPCControllers {
 		if (integrator_name_ == "RK4")
 		{
 			this->Build_C_d_for_solver_errCoord<&LinearMPCProb::RK4>(current_state, 
-																	x_ref_horizon, u_ref_horizon,
-																	udot_up_, udot_low_);
+																	x_ref_horizon, u_ref_horizon);
 		} else if (integrator_name_ == "Euler") {
 			this->Build_C_d_for_solver_errCoord<&LinearMPCProb::Euler>(current_state, 
-																	x_ref_horizon, u_ref_horizon,
-																	udot_up_, udot_low_);
+																	x_ref_horizon, u_ref_horizon);
 		} else {
 			std::cout << "Integrator not supported!" << std::endl;
 			return;

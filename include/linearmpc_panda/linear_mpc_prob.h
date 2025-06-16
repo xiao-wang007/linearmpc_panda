@@ -52,8 +52,10 @@ namespace MPCControllers{
 					  const MyUtils::ProcessedSolution& processed_refTraj,
 					  //const PiecewisePolynomial<double>& x_ref_spline,
 					  //const PiecewisePolynomial<double>& u_ref_spline,
-					  const Eigen::VectorXd& u_bounds,
-					  const Eigen::VectorXd& x_bounds, 
+					  const Eigen::VectorXd& u_up,
+					  const Eigen::VectorXd& u_low,
+					  const Eigen::VectorXd& x_up, 
+					  const Eigen::VectorXd& x_low, 
 					  const Eigen::VectorXd& u_entries=Eigen::VectorXd(), // indices for selective constraints on du 
 					  const Eigen::VectorXd& x_entries=Eigen::VectorXd()); // indices for selective constraints on dx
 	    ~LinearMPCProb();
@@ -91,9 +93,7 @@ namespace MPCControllers{
 					AutoDiffVecXd*)>
 		void Build_C_d_for_solver_errCoord(const Eigen::VectorXd& x0,
 		 								   const Eigen::Ref<Eigen::MatrixXd>& x_ref,
-		 								   const Eigen::Ref<Eigen::MatrixXd>& u_ref,
-										   const Eigen::VectorXd dudt_up = {},
-										   const Eigen::VectorXd dudt_low = {});
+		 								   const Eigen::Ref<Eigen::MatrixXd>& u_ref);
 
 		//
 		void Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
@@ -116,8 +116,10 @@ namespace MPCControllers{
 		Eigen::MatrixXd R_;
 		Eigen::MatrixXd P_;
 		//Eigen::VectorXd udot_up_ = {1000, 1000, 1000, 1000, 1000, 1000, 1000};
-		Eigen::VectorXd x_bounds_;
-		Eigen::VectorXd u_bounds_;
+		Eigen::VectorXd x_up_;
+		Eigen::VectorXd x_low_;
+		Eigen::VectorXd u_up_;
+		Eigen::VectorXd u_low_;
 		Eigen::VectorXd udot_up_; 
 		Eigen::VectorXd udot_low_; 
 		AutoDiffVecXd f_grad_;
