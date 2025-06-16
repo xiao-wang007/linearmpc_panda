@@ -389,12 +389,12 @@ namespace MPCControllers {
 		for (int i = 0; i < Nh_; i++)
 		{
 			// for du
-			lb_.segment(Nh_*nx_ + i*nu_, nu_) = (u_low_ - u_ref_.col(i)) / h_mpc_; // approx for +du/dt
-			ub_.segment(Nh_*nx_ + i*nu_, nu_) = (u_up_ - u_ref_.col(i)) / h_mpc_; // approx for -du/dt
+			lb_.segment(Nh_*nx_ + i*nu_, nu_) = (u_low_ - u_ref.col(i)) / h_mpc_; // approx for +du/dt
+			ub_.segment(Nh_*nx_ + i*nu_, nu_) = (u_up_ - u_ref.col(i)) / h_mpc_; // approx for -du/dt
 
 			// for dx
-			lb_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_low_- x_ref_.col(i)) / h_mpc; // approx for +dx/dt
-			ub_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_up_ - x_ref_.col(i)) / h_mpc; // approx for -dx/dt
+			lb_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_low_- x_ref.col(i)) / h_mpc_; // approx for +dx/dt
+			ub_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_up_ - x_ref.col(i)) / h_mpc_; // approx for -dx/dt
 		}
 
 	}

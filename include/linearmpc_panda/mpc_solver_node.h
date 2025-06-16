@@ -128,6 +128,12 @@ namespace MPCControllers
         PiecewisePolynomial<double> u_ref_spline_;
 
         /* Now I learnt, using unique_ptr avoids DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN assertion */
+        Eigen::VectorXd u_up_ {};
+        Eigen::VectorXd u_low_{};
+        Eigen::VectorXd x_up_ {};
+        Eigen::VectorXd x_low_ {};
+        Eigen::VectorXd u_entries_ {}; // indices for selective constraints on du
+        Eigen::VectorXd x_entries_ {}; // indices for selective constraints on dx
         std::unique_ptr<MPCControllers::LinearMPCProb> prob_;
 
         // run-time member data

@@ -30,6 +30,22 @@ namespace MPCControllers
         execution_length_ = h_mpc_ * n_exe_steps_;
         mpc_horizon_ = h_mpc_ * Nh_;
 
+        // set up the upper and lower bounds for u and x
+        u_up_.resize(nu_);
+        u_up_ << 87., 87., 87., 87., 12., 12., 12.;
+
+        u_low_.resize(nu_);
+        u_low_ << -87., -87., -87., -87., -12., -12., -12.;
+
+        x_up_.resize(nx_);
+        x_up_ << 2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973;
+
+        x_low_.resize(nx_);
+        x_low_ << -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973;
+
+        x_entries_ = Eigen::VectorXd::Ones(nx_);
+        u_entries_ = Eigen::VectorXd::Ones(nu_);
+
         //define the meta data of a std_msgs::Float64MultiArray for mpc_solution
         latest_mpc_sol_msg_.data.layout.dim.resize(2);
         latest_mpc_sol_msg_.data.layout.dim[0].label = "rows";
@@ -51,21 +67,25 @@ namespace MPCControllers
         Q_diags.head(q_coef.rows()) = q_coef;
         Q_diags.tail(v_coef.rows()) = v_coef;
         Eigen::DiagonalMatrix<double, NUM_JOINTS*2> Q_sparse = Q_diags.asDiagonal();
-        Eigen::MatrixXd Q = Q_sparse.toDenseMatrix();
+        Eigen::MatrixXd Q_ = Q_sparse.toDenseMatrix();
 
         //make R
         Eigen::VectorXd u_coef = Eigen::VectorXd::Constant(nu_, 0.001);
-        Eigen::MatrixXd R = u_coef.asDiagonal();
+        Eigen::MatrixXd R_ = u_coef.asDiagonal();
 
         //make P
-        Eigen::MatrixXd P = Eigen::MatrixXd::Identity(nx_, nx_) * 100;
+        Eigen::MatrixXd P_ = Eigen::MatrixXd::Identity(nx_, nx_) * 100;
 
         /* have to do this to avoid DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN() assertion as 
             I have a MultibodyPlant() inside LinearMPCProb()*/
+        //prob_ = std::make_unique<MPCControllers::LinearMPCProb>(panda_file_, integrator_, nx_, nu_, execution_length_, 
+                                                            //h_mpc_, h_env_, Nt_, X_W_base_, Q, R, P, 
+                                                            //data_proc_.x_ref_spline, 
+                                                            //data_proc_.u_ref_spline); 
+
         prob_ = std::make_unique<MPCControllers::LinearMPCProb>(panda_file_, integrator_, nx_, nu_, execution_length_, 
-                                                            h_mpc_, h_env_, Nt_, X_W_base_, Q, R, P, 
-                                                            data_proc_.x_ref_spline, 
-                                                            data_proc_.u_ref_spline); 
+                                                            h_mpc_, h_env_, Nt_, X_W_base_, Q_, R_, P_, 
+                                                            data_proc_, u_up_, u_low_, x_up_, x_low_, u_entries_, x_entries_); 
         //init solver output
         state_now_ = Eigen::VectorXd::Zero(nx_);
         u_ref_cmd_ = Eigen::MatrixXd::Zero(nu_, Nt_);
