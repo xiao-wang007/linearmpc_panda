@@ -90,7 +90,7 @@ namespace MyControllers
         int Nt_ {5}; 
         int n_exe_steps_ {1};
         double h_env_ {0.001}; //sim and panda control freq
-        double h_mpc_{0.04};
+        double h_mpc_{0.02};
         int Nh_ {};
         double execution_length_ {};
         double mpc_horizon_ {};
