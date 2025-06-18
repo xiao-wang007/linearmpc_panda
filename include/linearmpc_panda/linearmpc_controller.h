@@ -15,7 +15,8 @@
 #include <drake/common/trajectories/piecewise_polynomial.h>
 #include <mutex>
 #include <std_msgs/Time.h>
-#include "myutils.h"
+//#include "myutils.h"
+#include <linearmpc_panda/myutils.h>
 
 namespace MyControllers
 {
@@ -88,9 +89,9 @@ namespace MyControllers
         int nq_ {7};
         int nu_ {7}; 
         int Nt_ {5}; 
-        int n_exe_steps_ {1};
+        int n_exe_steps_ {3};
         double h_env_ {0.001}; //sim and panda control freq
-        double h_mpc_{0.02};
+        double h_mpc_{0.01};
         int Nh_ {};
         double execution_length_ {};
         double mpc_horizon_ {};

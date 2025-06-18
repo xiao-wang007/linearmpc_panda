@@ -3,7 +3,8 @@
 #include <vector>
 #include <string>
 #include <Eigen/Dense>
-#include "myutils.h"
+//#include "../include/linearmpc_panda/myutils.h"
+#include <linearmpc_panda/myutils.h>
 
 
 int main(int argc, char** argv) 

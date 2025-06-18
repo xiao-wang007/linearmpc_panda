@@ -357,11 +357,38 @@ add_dependencies(u_cmd_test ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_
 # Include the header files
 target_include_directories(u_cmd_test PUBLIC
         include
+        external/cnpy
         )
 
 # Install the executable
 install(TARGETS linearmpc_controller
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+#################################################################################################
+# Add a node to publish q_init_desired to be used for stabilization at q_init_desired
+add_executable(x_init_desired_publisher
+               src/x_init_desired_node.cc
+               )
+
+# Link the executable to the required libraries
+target_link_libraries(x_init_desired_publisher
+                      ${catkin_LIBRARIES} 
+                      Eigen3::Eigen 
+                      myutils
+                      )
+
+# Add dependencies to ensure proper build order
+add_dependencies(x_init_desired_publisher ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+
+# Include the header files
+target_include_directories(x_init_desired_publisher PUBLIC
+        include
+        )
+
+# Install the executable
+install(TARGETS x_init_desired_publisher
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
 #################################################################################################
 install(FILES controller_plugins.xml
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}

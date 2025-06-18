@@ -214,8 +214,11 @@ namespace MyControllers
         }
 
         auto t_now = ros::Time::now();
-        Eigen::VectorXd upsampled_u_cmd = u_cmd_spline_copy.value((t_now - mpc_t_start_).toSec());
-        // std::cout << "[linearmpc_controller] upsampled_u_cmd: " << upsampled_u_cmd.transpose() << std::endl;
+        //Eigen::VectorXd upsampled_u_cmd = u_cmd_spline_copy.value((t_now - mpc_t_start_).toSec());
+
+        //Sending torques to just last joint
+        Eigen::VectorXd upsampled_u_cmd = Eigen::VectorXd::Zero(nu_);
+        upsampled_u_cmd(nu_ - 1) = u_cmd_spline_copy.value((t_now - mpc_t_start_).toSec())(nu_ - 1);
 
         /*
         //should not do this! this basically ignores Coriolis
