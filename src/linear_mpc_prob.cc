@@ -58,6 +58,7 @@ namespace MPCControllers {
 		MatrixDecisionVariable<Eigen::Dynamic, Eigen::Dynamic> temp(du_vars_.rows(), 
 																	du_vars_.cols() + dx_vars_.cols());
 		temp << du_vars_, dx_vars_;
+		std::cout << "checking in linear_mpc_prob.cc constructor 2" << std::endl;
 
 		//this create a view, not making a copy
 		auto decVar_flat(Eigen::Map<const VectorDecisionVariable<Eigen::Dynamic>>(temp.data(), temp.size()));
@@ -81,6 +82,7 @@ namespace MPCControllers {
 			cost.evaluator()->set_description("Integral cost on u. ");
 		}
 
+		std::cout << "checking in linear_mpc_prob.cc constructor 3" << std::endl;
 		// add terminal cost
 		auto dx_f = dx_vars_.row(Nh_ - 1);
 		auto b = Eigen::VectorXd::Zero(nx_);
@@ -129,8 +131,12 @@ namespace MPCControllers {
 		// call member function to populate C_ for selecting decision variables
 		this->Populate_C_for_selecting_decision_variables(x_entries_, u_entries_);
 
+		std::cout << "checking in linear_mpc_prob.cc constructor 4" << std::endl;
+
 		// call member function to populate C_ for selecting du for dtau
   		this->Populate_C_for_selecting_du_for_dtau();
+
+		std::cout << "checking in linear_mpc_prob.cc constructor 5" << std::endl;
 
 		std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% here checking in LinearMPCProb() init" << std::endl;
 
@@ -340,6 +346,8 @@ namespace MPCControllers {
 	{
 		/* x_ref, u_ref are of Eigen::Matrix<Autodiff, m, n> */
 		//Continue here!
+		std::cout << "Checking in Build_C_d_for_solver_errCoord()! line 349" << std::endl;
+
 		AutoDiffVecXd fi(nx_);
 		auto xi_ad = math::InitializeAutoDiff(x_ref.col(0), nx_+nu_, 0);
 		auto ui_ad = math::InitializeAutoDiff(u_ref.col(0), nx_+nu_, nx_); // 3rd arg, grad starting index 
@@ -386,9 +394,12 @@ namespace MPCControllers {
 			*/
 
 			// a more efficient way
+			std::cout << "Checking in Build_C_d_for_solver_errCoord()! line 397 head of the for loop" << std::endl;
 			C_.block((i+1)*nx_, nu_+i*(nx_+nu_), nx_, nx_) = Ai;
-			C_.block((i+1)*nx_, nu_+i*(nx_+nu_) + nx_, nu_, nu_) = Bi;
+			C_.block((i+1)*nx_, nu_+i*(nx_+nu_) + nx_, nx_, nu_) = Bi;
+			std::cout << "Checking in Build_C_d_for_solver_errCoord()! line 400 head of the for loop" << std::endl;
 			C_.block((i+1)*nx_, nu_+i*(nx_+nu_) + nx_ + nu_, nx_, nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
+			std::cout << "Checking in Build_C_d_for_solver_errCoord()! line 402 tail of the for loop" << std::endl;
 		}
 
 		//MyUtils::VisualizeMatSparsity(C_);
@@ -418,8 +429,13 @@ namespace MPCControllers {
 		Eigen::VectorXd x_low_full = Eigen::kroneckerProduct(Eigen::VectorXd::Ones(Nh_), x_low_);
 
 		// x_ref_flat is a new copy of column-wise concatenation of x_ref
-		Eigen::VectorXd x_ref_flat = Eigen::Map<const Eigen::VectorXd>(x_ref.data(), x_ref.size());
-		Eigen::VectorXd u_ref_flat = Eigen::Map<const Eigen::VectorXd>(u_ref.data(), u_ref.size());
+		Eigen::VectorXd x_ref_flat = Eigen::Map<const Eigen::VectorXd>(x_ref.block(0, 1, x_ref.rows(), x_ref.cols() - 1).data(), Nh_ * nx_);
+		Eigen::VectorXd u_ref_flat = Eigen::Map<const Eigen::VectorXd>(u_ref.block(0, 1, u_ref.rows(), u_ref.cols() - 1).data(), Nh_ * nu_);
+
+		u_ref and x_ref size is wrong!!!!!!!!!!!!!!! Check again!
+
+		//std::cout << "u_low_full shape: " << u_low_full.rows() << " x " << u_low_full.cols() << std::endl; 
+		//std::cout << "u_ref_flat shape: " << u_ref_flat.rows() << " x " << u_ref_flat.cols() << std::endl;
 
 		assert(u_low_full.size() == u_ref_flat.size() && "u_low_full size is not the same as u_ref_flat size!");
 		assert(x_low_full.size() == x_ref_flat.size() && "x_low_full size is not the same as x_ref_flat size!");
@@ -489,7 +505,7 @@ namespace MPCControllers {
 		Eigen::MatrixXd block = Eigen::MatrixXd::Zero(nu_, nu_ + nx_ + nu_);
 
 		block << -Eigen::MatrixXd::Identity(nu_, nu_), 
-				  Eigen::MatrixXd::Zero(nx_, nx_), 
+				  Eigen::MatrixXd::Zero(nu_, nx_), 
 				  Eigen::MatrixXd::Identity(nu_, nu_);
 
         assert (C_.cols() == Nh_ * (nx_ + nu_) && "C_ cols is not correct!");
