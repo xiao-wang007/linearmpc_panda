@@ -433,6 +433,11 @@ namespace MPCControllers {
 		ub_.segment(Nh_*(nx_+nu_), Nh_*nx_) = x_up_full - x_ref_flat;
 
 		// set bounds for dtau constraint
+		// this does [u1, u2, u3] - [u0, u1, u2]
+		Eigen::MatrixXd diff = u_ref.block(0, 1, u_ref.rows(), u_ref.cols() - 1) - u_ref.block(0, 0, u_ref.rows(), u_ref.cols() - 1);
+		Eigen::VectorXd diff_flat = Eigen::Map<const Eigen::VectorXd>(diff.data(), diff.size());
+		lb_.segment(Nh_*(nx_ + nu_ + nx_), (Nh_-1)*nu_) = -1000.*h_mpc_ - diff_flat;
+		ub_.segment(Nh_*(nx_ + nu_ + nx_), (Nh_-1)*nu_) = 1000.*h_mpc_ - diff_flat;
 
 
 	}
