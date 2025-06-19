@@ -29,7 +29,6 @@ namespace MPCControllers {
 			processed_refTraj_(processed_refTraj), integrator_name_(integrator),
 			u_entries_(u_entries), x_entries_(x_entries), u_up_(u_up), u_low_(u_low), x_up_(x_up), x_low_(x_low)
 	{ 
-		std::cout << "checking in linear_mpc_prob.cc constructor 1" << std::endl;
 		mpc_horizon_ = h_mpc_ * Nh_;
 		/*make the plant for the controller with arm only, 
 		  no need to weld the finger and set the base pose as only joint space,
@@ -58,7 +57,6 @@ namespace MPCControllers {
 		MatrixDecisionVariable<Eigen::Dynamic, Eigen::Dynamic> temp(du_vars_.rows(), 
 																	du_vars_.cols() + dx_vars_.cols());
 		temp << du_vars_, dx_vars_;
-		std::cout << "checking in linear_mpc_prob.cc constructor 2" << std::endl;
 
 		//this create a view, not making a copy
 		auto decVar_flat(Eigen::Map<const VectorDecisionVariable<Eigen::Dynamic>>(temp.data(), temp.size()));
@@ -82,7 +80,6 @@ namespace MPCControllers {
 			cost.evaluator()->set_description("Integral cost on u. ");
 		}
 
-		std::cout << "checking in linear_mpc_prob.cc constructor 3" << std::endl;
 		// add terminal cost
 		auto dx_f = dx_vars_.row(Nh_ - 1);
 		auto b = Eigen::VectorXd::Zero(nx_);
@@ -102,48 +99,17 @@ namespace MPCControllers {
 		C_ = Eigen::MatrixXd::Zero(C_rows_, C_cols_);
 		C_.block(0, nu_, nx_, nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
 
-		/* //remove this at some point, verifying new way of doing this
-		// create matrix to select du & dx
-		Eigen::MatrixXd u_block(nu_, nu_ + nx_);
-		Eigen::MatrixXd x_block(nx_, nu_ + nx_);
-		u_block.setZero();
-		x_block.setZero();
-		//.leftCols() return a view, not a resisable object 
-		//u_block.leftCols(nu_) = u_entries_.asDiagonal();
-		//x_block.leftCols(nx_) = x_entries_.asDiagonal();
-		u_block.block(0, 0, nu_, nu_) = u_entries_.asDiagonal();
-		x_block.block(0, 0, nx_, nx_) = x_entries_.asDiagonal();
-		std::cout << "checking in linear_mpc_prob.cc constructor 4" << std::endl;
-
-		Eigen::MatrixXd u_selected = Eigen::MatrixXd::Zero(Nh_*nu_, Nh_*(nu_+nx_));
-		Eigen::MatrixXd x_selected = Eigen::MatrixXd::Zero(Nh_*nx_, Nh_*(nu_+nx_));
-		for (int i = 0; i < Nh_; ++i) 
-		{
-			u_selected.block(i * nu_, i * (nu_ + nx_), nu_, nu_ + nx_) = u_block;
-			x_selected.block(i * nx_, i * (nu_ + nx_), nx_, nu_ + nx_) = x_block;
-		}
-
-		// put u_selected and x_selected into C_
-		C_.block(Nh_*nx_,       0, Nh_*nu_, C_cols_) = u_selected;
-		C_.block(Nh_*(nx_+nu_), 0, Nh_*nx_, C_cols_) = x_selected;
-		*/
-
 		// call member function to populate C_ for selecting decision variables
 		this->Populate_C_for_selecting_decision_variables(x_entries_, u_entries_);
-
-		std::cout << "checking in linear_mpc_prob.cc constructor 4" << std::endl;
 
 		// call member function to populate C_ for selecting du for dtau
   		this->Populate_C_for_selecting_du_for_dtau();
 
-		std::cout << "checking in linear_mpc_prob.cc constructor 5" << std::endl;
-
-		std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% here checking in LinearMPCProb() init" << std::endl;
-
 		lb_ = Eigen::VectorXd::Zero(C_rows_);
 		ub_ = Eigen::VectorXd::Zero(C_rows_);
-
 		cst_ = prog_.AddLinearConstraint(C_, lb_, ub_, decVar_flat);
+
+		std::cout << "######################################## LinearMPCProb() inited!" << std::endl;
 	} 
 
 	//######################################################################################
@@ -345,9 +311,6 @@ namespace MPCControllers {
 									   const Eigen::Ref<Eigen::MatrixXd>& u_ref)
 	{
 		/* x_ref, u_ref are of Eigen::Matrix<Autodiff, m, n> */
-		//Continue here!
-		std::cout << "Checking in Build_C_d_for_solver_errCoord()! line 349" << std::endl;
-
 		AutoDiffVecXd fi(nx_);
 		auto xi_ad = math::InitializeAutoDiff(x_ref.col(0), nx_+nu_, 0);
 		auto ui_ad = math::InitializeAutoDiff(u_ref.col(0), nx_+nu_, nx_); // 3rd arg, grad starting index 
@@ -394,12 +357,9 @@ namespace MPCControllers {
 			*/
 
 			// a more efficient way
-			std::cout << "Checking in Build_C_d_for_solver_errCoord()! line 397 head of the for loop" << std::endl;
 			C_.block((i+1)*nx_, nu_+i*(nx_+nu_), nx_, nx_) = Ai;
 			C_.block((i+1)*nx_, nu_+i*(nx_+nu_) + nx_, nx_, nu_) = Bi;
-			std::cout << "Checking in Build_C_d_for_solver_errCoord()! line 400 head of the for loop" << std::endl;
 			C_.block((i+1)*nx_, nu_+i*(nx_+nu_) + nx_ + nu_, nx_, nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
-			std::cout << "Checking in Build_C_d_for_solver_errCoord()! line 402 tail of the for loop" << std::endl;
 		}
 
 		//MyUtils::VisualizeMatSparsity(C_);
@@ -429,10 +389,10 @@ namespace MPCControllers {
 		Eigen::VectorXd x_low_full = Eigen::kroneckerProduct(Eigen::VectorXd::Ones(Nh_), x_low_);
 
 		// x_ref_flat is a new copy of column-wise concatenation of x_ref
-		Eigen::VectorXd x_ref_flat = Eigen::Map<const Eigen::VectorXd>(x_ref.block(0, 1, x_ref.rows(), x_ref.cols() - 1).data(), Nh_ * nx_);
-		Eigen::VectorXd u_ref_flat = Eigen::Map<const Eigen::VectorXd>(u_ref.block(0, 1, u_ref.rows(), u_ref.cols() - 1).data(), Nh_ * nu_);
-
-		u_ref and x_ref size is wrong!!!!!!!!!!!!!!! Check again!
+		//Eigen::VectorXd x_ref_flat = Eigen::Map<const Eigen::VectorXd>(x_ref.block(0, 1, x_ref.rows(), x_ref.cols() - 1).data(), Nh_ * nx_);
+		//Eigen::VectorXd u_ref_flat = Eigen::Map<const Eigen::VectorXd>(u_ref.block(0, 0, u_ref.rows(), u_ref.cols() - 1).data(), Nh_ * nu_);
+		Eigen::VectorXd x_ref_flat = Eigen::Map<const Eigen::VectorXd>(x_ref.data(), Nh_ * nx_);
+		Eigen::VectorXd u_ref_flat = Eigen::Map<const Eigen::VectorXd>(u_ref.data(), Nh_ * nu_);
 
 		//std::cout << "u_low_full shape: " << u_low_full.rows() << " x " << u_low_full.cols() << std::endl; 
 		//std::cout << "u_ref_flat shape: " << u_ref_flat.rows() << " x " << u_ref_flat.cols() << std::endl;
@@ -452,6 +412,7 @@ namespace MPCControllers {
 		// this does [u1, u2, u3] - [u0, u1, u2]
 		Eigen::MatrixXd diff = u_ref.block(0, 1, u_ref.rows(), u_ref.cols() - 1) - u_ref.block(0, 0, u_ref.rows(), u_ref.cols() - 1);
 		Eigen::VectorXd diff_flat = Eigen::Map<const Eigen::VectorXd>(diff.data(), diff.size());
+
 		lb_.segment(Nh_*(nx_ + nu_ + nx_), (Nh_-1)*nu_) = Eigen::VectorXd::Constant(diff_flat.size(), -1000.*h_mpc_) - diff_flat;
 		ub_.segment(Nh_*(nx_ + nu_ + nx_), (Nh_-1)*nu_) = Eigen::VectorXd::Constant(diff_flat.size(),  1000.*h_mpc_) - diff_flat;
 	}
@@ -518,15 +479,27 @@ namespace MPCControllers {
 	void LinearMPCProb::Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
 																 double t_now)
 	{
+ 		/* This is IMPORTANT!!!!!
+		   du_vars = [u0, u1, u2, u3] 
+		   dx_vars = [x1, x2, x3, x4] 
+		   but correspondingly, to compute Ai and Bi, along the horizon, 
+		   need [x_ref0, x_ref1, x_ref2, x_ref3] 
+		   and  [u_ref0, u_ref1, u_ref2, u_ref3] 
+		   Therefore, querying the ref spline, using Nh_ time points 
+		   ----------------------------------------------------------
+		   | x0  | x1 | x2 | x3 | x4  |  -----> looking forward 4 intervals, Nh_ = 4 = n_xdecVar, Nt_ = 5
+		   	  \    \    \    \    /
+		   | u0  | u1 | u2 | u3 |      -----> applying 4 control inputs, starting from x0, also Nh_ = 4 = n_udecVar 
+		   ----------------------------------------------------------
+		   */
 		//query the spline using current time
-		auto ts_mpc = Eigen::VectorXd::LinSpaced(Nt_, t_now, t_now + mpc_horizon_);
+		auto ts_mpc = Eigen::VectorXd::LinSpaced(Nh_, t_now, t_now + mpc_horizon_);
 
- 		/* There may be a time offset? can the robot keep up? */
 		auto x_ref_horizon = processed_refTraj_.x_ref_spline.vector_values(ts_mpc);
 		auto u_ref_horizon = processed_refTraj_.u_ref_spline.vector_values(ts_mpc);
 
-		assert(x_ref_horizon.cols() == Nt_ && "x_ref_horizon dim is wrong!");
-		assert(u_ref_horizon.cols() == Nt_ && "u_ref_horizon dim is wrong!");
+		assert(x_ref_horizon.cols() == Nh_ && "x_ref_horizon dim is wrong!");
+		assert(u_ref_horizon.cols() == Nh_ && "u_ref_horizon dim is wrong!");
 
 		if (integrator_name_ == "Euler")
 		{
@@ -563,7 +536,8 @@ namespace MPCControllers {
 			return;
 		}	
 
-		u_ref_horizon.block(0, 1, nu_, Nh_) += du_sol_.transpose(); //u_ref_horizon[1:, :]
+		//u_ref_horizon.block(0, 1, nu_, Nh_) += du_sol_.transpose(); //u_ref_horizon[1:, :]
+		u_ref_horizon += du_sol_.transpose(); //u_ref_horizon[1:, :]
 		u_ref_cmd_ = u_ref_horizon;
 		u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc, u_ref_cmd_);
 	}
@@ -575,8 +549,8 @@ namespace MPCControllers {
 	{
 		std::cout << "Solve_and_update_C_d_for_solver_errCoord_test called!" << std::endl;
 		//query the spline using current time
-		assert(x_ref.cols() == Nt_ && "x_ref_horizon dim is wrong!");
-		assert(u_ref.cols() == Nt_ && "u_ref_horizon dim is wrong!");
+		assert(x_ref.cols() == Nh_ && "x_ref_horizon dim is wrong!");
+		assert(u_ref.cols() == Nh_ && "u_ref_horizon dim is wrong!");
 
 		auto x_ref_horizon = x_ref;
 		auto u_ref_horizon = u_ref;
@@ -618,7 +592,8 @@ namespace MPCControllers {
 		}	
 		
 		//std::cout << "du_sol_ shape: (" << du_sol_.rows() << ", " << du_sol_.cols() << ")" << std::endl;
-		u_ref_horizon.block(0, 1, nu_, Nh_) += du_sol_.transpose(); //u_ref_horizon[1:, :]
+		//u_ref_horizon.block(0, 1, nu_, Nh_) += du_sol_.transpose(); //u_ref_horizon[1:, :]
+		u_ref_horizon += du_sol_.transpose(); //u_ref_horizon[1:, :]
 		std::cout << "u_ref_horizon shape: (" << u_ref_horizon.rows() << ", " << u_ref_horizon.cols() << ")" << std::endl;
 		std::cout << "u_ref_horizon: \n" << u_ref_horizon << '\n' << std::endl;
 

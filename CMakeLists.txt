@@ -390,6 +390,30 @@ install(TARGETS x_init_desired_publisher
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #################################################################################################
+# Add fake_joint_state_publisher node
+add_executable(fake_joint_state_publisher
+               src/fake_joint_state_publisher.cc
+               )
+
+# Link the executable to the required libraries
+target_link_libraries(fake_joint_state_publisher
+                      ${catkin_LIBRARIES} 
+                      Eigen3::Eigen 
+                      )
+
+# Add dependencies to ensure proper build order
+add_dependencies(fake_joint_state_publisher ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+
+# Include the header files
+target_include_directories(fake_joint_state_publisher PUBLIC
+        include
+        )
+
+# Install the executable
+install(TARGETS fake_joint_state_publisher
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+#################################################################################################
 install(FILES controller_plugins.xml
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
         )

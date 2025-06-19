@@ -71,6 +71,7 @@ namespace MyControllers
         else {
             std::cout << "checking here then 1.5 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
             data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
+            //std::cout << "data_proc_.trajs.at('q_panda').row(0): " << data_proc_.trajs.at("q_panda").row(0) << std::endl;
         }
 
         std::cout << "checking here then 1.5 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
@@ -121,10 +122,10 @@ namespace MyControllers
         std::cout << "checking here then 4 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 
         //init solver output
-        latest_mpc_sol_ = Eigen::MatrixXd::Zero(nu_, Nt_);
+        latest_mpc_sol_ = Eigen::MatrixXd::Zero(nu_, Nh_);
 
         //init u_sol_spline_ by the first bit before mpc solution is ready
-        auto ts = Eigen::VectorXd::LinSpaced(Nt_, 0., Nh_ * h_mpc_);
+        auto ts = Eigen::VectorXd::LinSpaced(Nh_, 0., Nh_ * h_mpc_);
         u_cmd_spline_ = drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(ts, data_proc_.u_ref_spline.vector_values(ts));
         
         
@@ -187,7 +188,7 @@ namespace MyControllers
         prob_->Get_solution(latest_mpc_sol_); //Pass by argument
         std::cout << "[linearmpc_controller] latest_mpc_sol_: \n" << latest_mpc_sol_ << std::endl;
         u_cmd_spline_ = drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(
-                Eigen::VectorXd::LinSpaced(Nt_, current_time, current_time + mpc_horizon_), latest_mpc_sol_);
+                Eigen::VectorXd::LinSpaced(Nh_, current_time, current_time + mpc_horizon_), latest_mpc_sol_);
 
     }
 
