@@ -365,47 +365,75 @@ namespace MPCControllers {
 			Bi = fi_grad.block(0, nx_, nx_, nu_);
 
 			/* In Eigen, the << operator stacks elements row-by-row, not matrices side-by-side. */
+
+			/* // I think this is wrong! 
 			auto C_sub = C_.block((i+1)*nx_, nu_+i*(nx_+nu_), nx_, nx_+nu_+nx_);
 			C_sub.leftCols(nx_) = Ai;
 			C_sub.middleCols(nx_, nu_) = Bi;
 			C_sub.rightCols(nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
+			*/
+
+			// I think this is correct: stride by i*(nx_+nu_), NOT nu_+i*(nx_+nu_)
+			auto C_sub = C_.block((i+1)*nx_, i*(nx_+nu_), nx_, nx_+nu_+nx_);
+			C_sub.leftCols(nx_) = Ai;
+			C_sub.middleCols(nx_, nu_) = Bi;
+			C_sub.rightCols(nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
+
+			Here!!!!!!!!!!!!!
+
+			C_.block((i+1)*nx_, nu_+i*(nx_+nu_), nx_, nx_+nu_+nx_);
 		}
 
 		//MyUtils::VisualizeMatSparsity(C_);
 
-		//if (u_entries_.size() == 0)
-		//{
-			//lb_.head(nx_) = init;
-			//ub_.head(nx_) = init;
-		//} else {
-			//lb_.head(nx_ + nu_) = init;
-			//lb_.tail(Nh_ * nu_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), udot_low_);
-			//ub_.head(nx_ + nu_) = init;
-			//ub_.tail(Nh_ * nu_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), udot_up_);
-		//}
-		
 		lb_.head(nx_) = init;
 		ub_.head(nx_) = init;
-
-		////index for du
-		//lb_.segment(Nh_*nx_, Nh_*nu_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), );
-		//ub_.segment(Nh_*nx_, Nh_*nu_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), );
-		//lb_.tail(Nh_ * nx_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), );
-		//ub_.tail(Nh_ * nx_) = Eigen::kroneckerProduct(Eigen::MatrixXd::Identity(Nh_, Nh_), );
 
 		// index for du & dx
 		for (int i = 0; i < Nh_; i++)
 		{
-			// for du
-			lb_.segment(Nh_*nx_ + i*nu_, nu_) = (u_low_ - u_ref.col(i)) / h_mpc_; // approx for +du/dt
-			ub_.segment(Nh_*nx_ + i*nu_, nu_) = (u_up_ - u_ref.col(i)) / h_mpc_; // approx for -du/dt
+			// bounds for du
+			lb_.segment(Nh_*nx_ + i*nu_, nu_) = (u_low_ - u_ref.col(i)); 
+			ub_.segment(Nh_*nx_ + i*nu_, nu_) = (u_up_ - u_ref.col(i)); 
 
-			// for dx
-			lb_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_low_- x_ref.col(i)) / h_mpc_; // approx for +dx/dt
-			ub_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_up_ - x_ref.col(i)) / h_mpc_; // approx for -dx/dt
+			// bounds for dx
+			lb_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_low_- x_ref.col(i)); 
+			ub_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_up_ - x_ref.col(i)); 
+		}
+	}
+
+	//######################################################################################
+	void LinearMPCProb::Populate_C_for_selecting_decision_variables()
+	{
+		// check C_ is initialized
+        assert(C_.rows() > 0 && C_.cols() > 0 && "C_ is not initialized!");
+
+		// select du 
+		for (int i = 0; i < Nh_; i++)
+		{
+			int start_row = Nh_ * nx_ + i * nu_;
+			int start_col = i * (nu_ + nx_);
+			C_.block(start_row, start_col, nu_, nu_) = Eigen::MatrixXd::Identity(nu_, nu_);
 		}
 
+		// select dx
+		for (int i = 0; i < Nh_; i++)
+		{
+		    int start_row = Nh_ * (nx_ + nu_) + i * nx_;
+			int start_col = i * (nu_ + nx_) + nu_;
+			C_.block(start_row, start_col, nx_, nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
+		}
 	}
+
+	//######################################################################################
+	void LinearMPCProb::Populate_C_for_selecting_du_for_dtau()
+	{
+		// check C_ is initialized
+		assert(C_.rows() > 0 && C_.cols() > 0 && "C_ is not initialized!");
+
+	}
+
+
 	//######################################################################################
 	void LinearMPCProb::Solve_and_update_C_d_for_solver_errCoord(const Eigen::VectorXd& current_state, 
 																 double t_now)

@@ -106,6 +106,12 @@ namespace MPCControllers{
 		//
 		void Get_solution(Eigen::MatrixXd& output);
 
+		//
+		void Populate_C_for_selecting_decision_variables();
+
+		//
+		void Populate_C_for_selecting_du_for_dtau();
+
 
 	private:
 		drake::systems::DiscreteStateIndex state_index_;
