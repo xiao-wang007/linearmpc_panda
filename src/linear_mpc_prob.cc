@@ -65,8 +65,6 @@ namespace MPCControllers {
 		//TO DO: custom cst and costs bindings
 		// https://stackoverflow.com/questions/65860331/could-you-demo-a-very-simple-c-example-about-symbolic-variable-and-jacobian-by
 		// AN EXAMPLE OF cost and cst bindings
-
-		std::cout << "checking in linear_mpc_prob.cc constructor 2" << std::endl;
 		
 		// add cost integral cost
 		for (int i = 0; i < Nh_ - 1; ++i)
@@ -91,18 +89,24 @@ namespace MPCControllers {
 
 		// set up the constraints
 		C_cols_ = Nh_ * (nx_ + nu_);
-		C_rows_ = Nh_*nx_ + Nh_*nu_ + Nh_*nx_;
+
+		/* correspond to: 
+		   dynamics constraints,
+		   du bounds,
+		   dx bounds,
+		   dtau bounds*/ 
+		C_rows_ = Nh_*nx_ + Nh_*nu_ + Nh_*nx_ + (Nh_-1)*nu_;
 
 		C_ = Eigen::MatrixXd::Zero(C_rows_, C_cols_);
 		C_.block(0, nu_, nx_, nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
 
-		std::cout << "checking in linear_mpc_prob.cc constructor 3" << std::endl;
+		/* //remove this at some point, verifying new way of doing this
 		// create matrix to select du & dx
 		Eigen::MatrixXd u_block(nu_, nu_ + nx_);
 		Eigen::MatrixXd x_block(nx_, nu_ + nx_);
 		u_block.setZero();
 		x_block.setZero();
-		/*.leftCols() return a view, not a resisable object */
+		//.leftCols() return a view, not a resisable object 
 		//u_block.leftCols(nu_) = u_entries_.asDiagonal();
 		//x_block.leftCols(nx_) = x_entries_.asDiagonal();
 		u_block.block(0, 0, nu_, nu_) = u_entries_.asDiagonal();
@@ -120,6 +124,13 @@ namespace MPCControllers {
 		// put u_selected and x_selected into C_
 		C_.block(Nh_*nx_,       0, Nh_*nu_, C_cols_) = u_selected;
 		C_.block(Nh_*(nx_+nu_), 0, Nh_*nx_, C_cols_) = x_selected;
+		*/
+
+		// call member function to populate C_ for selecting decision variables
+		this->Populate_C_for_selecting_decision_variables(x_entries_, u_entries_);
+
+		// call member function to populate C_ for selecting du for dtau
+  		this->Populate_C_for_selecting_du_for_dtau();
 
 		std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% here checking in LinearMPCProb() init" << std::endl;
 
@@ -365,30 +376,28 @@ namespace MPCControllers {
 			Bi = fi_grad.block(0, nx_, nx_, nu_);
 
 			/* In Eigen, the << operator stacks elements row-by-row, not matrices side-by-side. */
-
-			/* // I think this is wrong! 
-			auto C_sub = C_.block((i+1)*nx_, nu_+i*(nx_+nu_), nx_, nx_+nu_+nx_);
+			/* // Correct! 2nd arg in .block(), nu_ offsets B0
+			int starting_row = (i+1)*nx_;
+			int starting_col = nu_+i*(nx_+nu_);
+			auto C_sub = C_.block(starting_row, starting_col, nx_, nx_+nu_+nx_);
 			C_sub.leftCols(nx_) = Ai;
 			C_sub.middleCols(nx_, nu_) = Bi;
 			C_sub.rightCols(nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
 			*/
 
-			// I think this is correct: stride by i*(nx_+nu_), NOT nu_+i*(nx_+nu_)
-			auto C_sub = C_.block((i+1)*nx_, i*(nx_+nu_), nx_, nx_+nu_+nx_);
-			C_sub.leftCols(nx_) = Ai;
-			C_sub.middleCols(nx_, nu_) = Bi;
-			C_sub.rightCols(nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
-
-			Here!!!!!!!!!!!!!
-
-			C_.block((i+1)*nx_, nu_+i*(nx_+nu_), nx_, nx_+nu_+nx_);
+			// a more efficient way
+			C_.block((i+1)*nx_, nu_+i*(nx_+nu_), nx_, nx_) = Ai;
+			C_.block((i+1)*nx_, nu_+i*(nx_+nu_) + nx_, nu_, nu_) = Bi;
+			C_.block((i+1)*nx_, nu_+i*(nx_+nu_) + nx_ + nu_, nx_, nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
 		}
 
 		//MyUtils::VisualizeMatSparsity(C_);
 
+		/* the bounds on decision variables change as well, so I have to do it here. */
 		lb_.head(nx_) = init;
 		ub_.head(nx_) = init;
 
+		/*
 		// index for du & dx
 		for (int i = 0; i < Nh_; i++)
 		{
@@ -399,30 +408,71 @@ namespace MPCControllers {
 			// bounds for dx
 			lb_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_low_- x_ref.col(i)); 
 			ub_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_up_ - x_ref.col(i)); 
-		}
+		} */
+
+		/* using kroneckerProduct to do the same */ 
+		Eigen::VectorXd u_up_full = Eigen::kroneckerProduct(Eigen::VectorXd::Ones(Nh_), u_up_);
+		auto u_low_full = -u_up_full;
+
+		Eigen::VectorXd x_up_full = Eigen::kroneckerProduct(Eigen::VectorXd::Ones(Nh_), x_up_);
+		Eigen::VectorXd x_low_full = Eigen::kroneckerProduct(Eigen::VectorXd::Ones(Nh_), x_low_);
+
+		// x_ref_flat is a new copy of column-wise concatenation of x_ref
+		Eigen::VectorXd x_ref_flat = Eigen::Map<const Eigen::VectorXd>(x_ref.data(), x_ref.size());
+		Eigen::VectorXd u_ref_flat = Eigen::Map<const Eigen::VectorXd>(u_ref.data(), u_ref.size());
+
+		assert(u_low_full.size() == u_ref_flat.size() && "u_low_full size is not the same as u_ref_flat size!");
+		assert(x_low_full.size() == x_ref_flat.size() && "x_low_full size is not the same as x_ref_flat size!");
+
+		// set bounds for du 
+		lb_.segment(Nh_*nx_, Nh_*nu_) = u_low_full - u_ref_flat;
+		ub_.segment(Nh_*nx_, Nh_*nu_) = u_up_full - u_ref_flat;
+
+		// set bounds for dx
+		lb_.segment(Nh_*(nx_+nu_), Nh_*nx_) = x_low_full - x_ref_flat;
+		ub_.segment(Nh_*(nx_+nu_), Nh_*nx_) = x_up_full - x_ref_flat;
+
+		// set bounds for dtau constraint
+
+
 	}
 
 	//######################################################################################
-	void LinearMPCProb::Populate_C_for_selecting_decision_variables()
+	void LinearMPCProb::Populate_C_for_selecting_decision_variables(const Eigen::VectorXd& x_entries,
+																	const Eigen::VectorXd& u_entries)
 	{
 		// check C_ is initialized
         assert(C_.rows() > 0 && C_.cols() > 0 && "C_ is not initialized!");
 
+		/*
 		// select du 
 		for (int i = 0; i < Nh_; i++)
 		{
+			// Nh_*nx_ skips the rows for dynamics constraint
 			int start_row = Nh_ * nx_ + i * nu_;
 			int start_col = i * (nu_ + nx_);
-			C_.block(start_row, start_col, nu_, nu_) = Eigen::MatrixXd::Identity(nu_, nu_);
+			C_.block(start_row, start_col, nu_, nu_) = u_entries.asDiagonal();
 		}
 
 		// select dx
 		for (int i = 0; i < Nh_; i++)
 		{
+			// Nh_*(nx_+nu_) skips the rows for dynamics constraint and the selection of du
 		    int start_row = Nh_ * (nx_ + nu_) + i * nx_;
 			int start_col = i * (nu_ + nx_) + nu_;
-			C_.block(start_row, start_col, nx_, nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
-		}
+			C_.block(start_row, start_col, nx_, nx_) = x_entries.asDiagonal();
+		}*/
+
+		int reps = Nh_;
+		Eigen::MatrixXd I_rep = Eigen::MatrixXd::Identity(reps, reps);
+		Eigen::MatrixXd block_du = u_entries.asDiagonal();
+		Eigen::MatrixXd block_dx = x_entries.asDiagonal();
+
+		int du_starting_row = Nh_ * nx_;
+		C_.block(du_starting_row, 0, nu_*reps, C_.cols()) = Eigen::kroneckerProduct(I_rep, block_du);
+
+		int dx_starting_row = Nh_ * (nx_ + nu_);
+		C_.block(dx_starting_row, 0, nx_*reps, C_.cols()) = Eigen::kroneckerProduct(I_rep, block_dx);
 	}
 
 	//######################################################################################
@@ -430,7 +480,18 @@ namespace MPCControllers {
 	{
 		// check C_ is initialized
 		assert(C_.rows() > 0 && C_.cols() > 0 && "C_ is not initialized!");
+		int reps = Nh_ - 1;
 
+		Eigen::MatrixXd I_rep = Eigen::MatrixXd::Identity(reps, reps);
+		Eigen::MatrixXd block = Eigen::MatrixXd::Zero(nu_, nu_ + nx_ + nu_);
+
+		block << -Eigen::MatrixXd::Identity(nu_, nu_), 
+				  Eigen::MatrixXd::Zero(nx_, nx_), 
+				  Eigen::MatrixXd::Identity(nu_, nu_);
+
+        assert (C_.cols() == Nh_ * (nx_ + nu_) && "C_ cols is not correct!");
+
+	    C_.block(Nh_*(nx_ + nu_ + nx_), 0, nu_*reps, C_.cols()) = Eigen::kroneckerProduct(I_rep, block);
 	}
 
 
