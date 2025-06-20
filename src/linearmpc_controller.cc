@@ -98,7 +98,9 @@ namespace MyControllers
         std::cout << "checking here then 2 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 
         //make Q
-        Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
+        //Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
+        //Eigen::VectorXd v_coef = Eigen::VectorXd::Constant(nu_, 1.) * 0.1;
+        Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 10.0) * 12.;
         Eigen::VectorXd v_coef = Eigen::VectorXd::Constant(nu_, 1.) * 0.1;
         Eigen::VectorXd Q_diags(q_coef.rows() + v_coef.rows());
         Q_diags.head(q_coef.rows()) = q_coef;
@@ -107,7 +109,8 @@ namespace MyControllers
         Eigen::MatrixXd Q_ = Q_sparse.toDenseMatrix();
 
         //make R
-        Eigen::VectorXd u_coef = Eigen::VectorXd::Constant(nu_, 0.001);
+        //Eigen::VectorXd u_coef = Eigen::VectorXd::Constant(nu_, 0.001);
+        Eigen::VectorXd u_coef = Eigen::VectorXd::Constant(nu_, 10);
         Eigen::MatrixXd R_ = u_coef.asDiagonal();
 
         //make P
