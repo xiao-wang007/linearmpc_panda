@@ -140,11 +140,11 @@ namespace MyControllers
         ros::Timer upsample_timer_;
         bool simulation_ready_signal_ {false}; // Flag to indicate if sim is ready
         std::atomic<bool> received_first_state_ {false}; // Flag to stop the controller thread
-        bool mpc_started_ {false}; // Flag to indicate if MPC has started
 
         std::atomic<bool> q_init_reached_ {false}; // thread-safe flag to indicate if q_init is reached
         std::atomic<bool> service_called_ {false};
         Eigen::VectorXd q_init_desired_ {Eigen::VectorXd::Zero(NUM_JOINTS)}; // Desired initial pose
+        Eigen::VectorXd v_now_filtered_ {Eigen::VectorXd::Zero(NUM_JOINTS)}; // Filtered joint velocities
     };
 
 }

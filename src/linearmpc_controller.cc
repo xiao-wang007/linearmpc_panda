@@ -141,15 +141,8 @@ namespace MyControllers
         std::lock_guard<std::mutex> lock(state_mutex_);
         q_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->position.data());
         v_now_ = Eigen::Map<const Eigen::Matrix<double, NUM_JOINTS, 1>>(msg->velocity.data());
-
-        if (!received_first_state_)
-        {
-            received_first_state_ = true; // Set the flag to true after receiving the first state
-            ROS_INFO_STREAM("Current joint positions: " << q_now_.transpose());
-            ROS_INFO_STREAM("Current joint velocities: " << v_now_.transpose());
-            auto wall_time = ros::WallTime::now();
-            std::cout << "[linearmpc_controller] wall time now: " << wall_time << std::endl;
-        }
+        
+        received_first_state_ = true; // Set the flag to true after receiving the first state
     }
 
     //###############################################################################
@@ -162,14 +155,6 @@ namespace MyControllers
             return;
         }
 
-
-        if (!mpc_started_) 
-        {
-            mpc_t_start_ = ros::Time::now();
-            mpc_started_ = true;
-            ROS_INFO_STREAM("[linearmpc_controller] MPC started, t_start initialized: t_start = " << mpc_t_start_);
-        }
-
         Eigen::VectorXd local_q_now, local_v_now;
         {
             std::lock_guard<std::mutex> lock(state_mutex_);
@@ -177,7 +162,14 @@ namespace MyControllers
             local_v_now = v_now_;
         } // lock release when go out of this scope
 
-        state_now_ << local_q_now, local_v_now; // these are updated in the subcription callback
+        // smooth joint velocity measurements
+        double alpha = 0.95;
+        for (size_t i = 0; i < local_v_now.size(); ++i)
+        {
+            v_now_filtered_(i) = alpha * local_v_now(i) + (1 - alpha) * v_now_filtered_(i);
+        }
+
+        state_now_ << local_q_now, v_now_filtered_; // these are updated in the subcription callback
         std::cout << "q_now: " << local_q_now.transpose() << std::endl;
 
         auto t_now = ros::Time::now();
@@ -192,15 +184,7 @@ namespace MyControllers
         std::cout << "[linearmpc_controller] latest_mpc_sol_: \n" << latest_mpc_sol_ << std::endl;
         u_cmd_spline_ = drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(
                 Eigen::VectorXd::LinSpaced(Nh_, current_time, current_time + mpc_horizon_), latest_mpc_sol_);
-
     }
-
-    //###############################################################################
-    //void LinearMPCControllerNode::q_init_reached_callback(const std_msgs::Bool::ConstPtr& msg)
-    //{
-        //q_init_reached_ = msg->data;
-    //}
-
 
     //###############################################################################
     void LinearMPCControllerNode::publish_upsampled_command(const ros::TimerEvent& event)
@@ -285,11 +269,7 @@ namespace MyControllers
             rate.sleep();
         }
 
-        if (!ros::ok()) 
-        {
-            ROS_WARN("ROS shutdown requested before reaching initial pose.");
-            return;
-        }
+        ros::Time mpc_t_start_ = ros::Time::now();
 
         //start solver in a separate thread
         std::thread solver_thread (
