@@ -5,7 +5,7 @@
 #include <cassert>
 #include <optional>
 #include <functional>
-#include "myutils.h"
+#include <linearmpc_panda/myutils.h>
 
 #include <drake/solvers/osqp_solver.h>
 #include <drake/solvers/solve.h>
@@ -39,6 +39,7 @@ namespace MPCControllers{
 		// have to create the plant here since DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(MultibodyPlant)
 		LinearMPCProb(const std::string& plant_file,
 					  const std::string& integrator_name,
+					  bool exclude_gravity,
 					  int nx, 
 					  int nu, 
 					  double execution_length,
@@ -50,8 +51,6 @@ namespace MPCControllers{
 					  Eigen::MatrixXd R,
 					  Eigen::MatrixXd P,
 					  const MyUtils::ProcessedSolution& processed_refTraj,
-					  //const PiecewisePolynomial<double>& x_ref_spline,
-					  //const PiecewisePolynomial<double>& u_ref_spline,
 					  const Eigen::VectorXd& u_up,
 					  const Eigen::VectorXd& u_low,
 					  const Eigen::VectorXd& x_up, 
@@ -114,7 +113,7 @@ namespace MPCControllers{
 		void Populate_C_for_selecting_du_for_dtau();
 
 	private:
-		drake::systems::DiscreteStateIndex state_index_;
+		bool exclude_gravity_;
 		std::string integrator_name_;
 		int nx_, nu_, Nt_, Nh_;
 		double h_mpc_, h_env_, execution_length_, mpc_horizon_;
@@ -151,7 +150,7 @@ namespace MPCControllers{
 		Eigen::MatrixXd dx_sol_;
 		Eigen::MatrixXd du_sol_;
 		Eigen::MatrixXd u_ref_cmd_; // for interpolation
-		PiecewisePolynomial<double> u_ref_cmd_spline_;
+		//PiecewisePolynomial<double> u_ref_cmd_spline_;
 		//VectorDecisionVariable<Eigen::Dynamic> decVar_flat_;
 		int C_rows_;
 		int C_cols_;

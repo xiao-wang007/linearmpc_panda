@@ -83,7 +83,7 @@ namespace MPCControllers
                                                             //data_proc_.x_ref_spline, 
                                                             //data_proc_.u_ref_spline); 
 
-        prob_ = std::make_unique<MPCControllers::LinearMPCProb>(panda_file_, integrator_, nx_, nu_, execution_length_, 
+        prob_ = std::make_unique<MPCControllers::LinearMPCProb>(panda_file_, integrator_, exclude_gravity_, nx_, nu_, execution_length_, 
                                                             h_mpc_, h_env_, Nt_, X_W_base_, Q_, R_, P_, 
                                                             data_proc_, u_up_, u_low_, x_up_, x_low_, u_entries_, x_entries_); 
         //init solver output

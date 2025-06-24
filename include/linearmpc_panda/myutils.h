@@ -91,8 +91,5 @@ namespace MyUtils {
 
 	//
 	void BuildArmOnlyPlant(std::unique_ptr<MultibodyPlant<double>>& plant_ptr);
-
-	
-
 }
 

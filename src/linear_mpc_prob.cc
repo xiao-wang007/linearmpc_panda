@@ -5,6 +5,7 @@ namespace MPCControllers {
 	// constructor
 	LinearMPCProb::LinearMPCProb(const std::string& plant_file,
 			                     const std::string& integrator,	
+								 bool exclude_gravity,
 				  				 int nx, 
 				  				 int nu, 
 				  				 double execution_length,
@@ -16,8 +17,6 @@ namespace MPCControllers {
 						  		 Eigen::MatrixXd R,
 						  		 Eigen::MatrixXd P,
 								 const MyUtils::ProcessedSolution& processed_refTraj,
-								 //const PiecewisePolynomial<double>& x_ref_spline,
-								 //const PiecewisePolynomial<double>& u_ref_spline,
 								 const Eigen::VectorXd& u_up,
 								 const Eigen::VectorXd& u_low,
 								 const Eigen::VectorXd& x_up,
@@ -26,7 +25,7 @@ namespace MPCControllers {
 								 const Eigen::VectorXd& x_entries)
 		  : nx_(nx), nu_(nu), h_mpc_(h_mpc), h_env_(h_env), Nt_(Nt), 
 		    Nh_(Nt - 1), execution_length_(execution_length), Q_(Q), R_(R), P_(P),
-			processed_refTraj_(processed_refTraj), integrator_name_(integrator),
+			processed_refTraj_(processed_refTraj), integrator_name_(integrator), exclude_gravity_(exclude_gravity),
 			u_entries_(u_entries), x_entries_(x_entries), u_up_(u_up), u_low_(u_low), x_up_(x_up), x_low_(x_low)
 	{ 
 		mpc_horizon_ = h_mpc_ * Nh_;
@@ -128,10 +127,16 @@ namespace MPCControllers {
 		VectorX<AutoDiffXd> C(nv);
 		plantAD_ptr_->CalcBiasTerm(*(contextAD_ptr_.get()), &C);
 
-		//const auto G = plantAD_ptr_->CalcGravityGeneralizedForces(*(contextAD_ptr_.get()));
-		//auto ddq = M_inv * (G + x.tail(nu_) - C);
+		VectorX<AutoDiffXd> ddq(nv);
+		if (exclude_gravity_)
+		{
+			ddq = M_inv * (x.tail(nu_) - C); // panda has internal compensation
+		}
+		else {
+			const auto G = plantAD_ptr_->CalcGravityGeneralizedForces(*(contextAD_ptr_.get()));
+			ddq = M_inv * (G + x.tail(nu_) - C);
+		}
 
-		auto ddq = M_inv * (x.tail(nu_) - C); // panda has internal compensation
 		(*y).head(nv) = x.tail(nv);
 		(*y).tail(nv) = ddq;
 	}
@@ -154,11 +159,15 @@ namespace MPCControllers {
 		VectorX<AutoDiffXd> C(nv);
 		plantAD_ptr_->CalcBiasTerm(*(contextAD_ptr_.get()), &C);
 
-		//const auto G = plantAD_ptr_->CalcGravityGeneralizedForces(*(contextAD_ptr_.get()));
-		////auto ddq = M_inv * (G + x.tail(nu_) - C);
-		//auto ddq = M_inv * (G + ui - C);
+		VectorX<AutoDiffXd> ddq(nv);
+		if (exclude_gravity_)
+		{
+			ddq = M_inv * (ui - C);
+		} else {
+			const auto G = plantAD_ptr_->CalcGravityGeneralizedForces(*(contextAD_ptr_.get()));
+			ddq = M_inv * (G + ui - C);
+		}
 
-		auto ddq = M_inv * (ui - C);
 		//std::cout << "ddq size: " << ddq << std::endl;
 		(*yi).head(nv) = xi.tail(nv);
 		(*yi).tail(nv) = ddq;
@@ -539,7 +548,7 @@ namespace MPCControllers {
 		//u_ref_horizon.block(0, 1, nu_, Nh_) += du_sol_.transpose(); //u_ref_horizon[1:, :]
 		u_ref_horizon += du_sol_.transpose(); //u_ref_horizon[1:, :]
 		u_ref_cmd_ = u_ref_horizon;
-		u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc, u_ref_cmd_);
+		//u_ref_cmd_spline_ = PiecewisePolynomial<double>::FirstOrderHold(ts_mpc, u_ref_cmd_);
 	}
 
 	//######################################################################################

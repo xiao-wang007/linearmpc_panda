@@ -94,6 +94,7 @@ namespace MPCControllers
         std::string panda_file_ {"/home/rosdrake/panda_arm.urdf"};
         std::string integrator_ {"RK4"};
         drake::math::RigidTransform<double> X_W_base_ {};
+        bool exclude_gravity_ {false}; // as panda has internal gravity compensation
         int nx_ {14}; 
         int nq_ {7};
         int nu_ {7}; 

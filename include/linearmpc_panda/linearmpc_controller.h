@@ -48,7 +48,7 @@ namespace MyControllers
     {
     public:
         // Constructor
-        LinearMPCControllerNode();
+        LinearMPCControllerNode(ros::NodeHandle& node_handle);
 
         // Destructor
         ~LinearMPCControllerNode() = default;
@@ -64,6 +64,12 @@ namespace MyControllers
         //void q_init_reached_callback(const std_msgs::Bool::ConstPtr& msg);
 
         bool initial_pose_reached();
+
+        void LinearizeAtReference(std::unique_ptr<MPCControllers::LinearMPCProb>& prob,
+                                  const Eigen::VectorXd& x_ref,
+                                  const Eigen::VectorXd& u_ref,
+                                  Eigen::MatrixXd& A,
+                                  Eigen::MatrixXd& B);
     
     private:
         // ROS related member variables
@@ -81,18 +87,18 @@ namespace MyControllers
        
         /* false if planned traj already removed G term
            true if planned traj is the full dynamic */
-        bool exclude_gravity_from_traj_ {false}; // as panda has internal gravity compensation
+        bool exclude_gravity_ {}; // as panda has internal gravity compensation
 
         std::string integrator_ {"Euler"};
         drake::math::RigidTransform<double> X_W_base_ {};
         int nx_ {14}; 
         int nq_ {7};
         int nu_ {7}; 
-        int Nt_ {5}; 
+        int Nh_ {5}; 
         int n_exe_steps_ {2};
         double h_env_ {0.001}; //sim and panda control freq
         double h_mpc_{0.02};
-        int Nh_ {};
+        int Nt_ {}; // including x0 
         double execution_length_ {};
         double mpc_horizon_ {};
         Eigen::MatrixXd Q_;
