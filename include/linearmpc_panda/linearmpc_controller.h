@@ -13,6 +13,7 @@
 #include <Eigen/Dense>
 #include <linearmpc_panda/StampedFloat64MultiArray.h>
 #include <drake/common/trajectories/piecewise_polynomial.h>
+#include <drake/systems/controllers/linear_quadratic_regulator.h>
 #include <mutex>
 #include <std_msgs/Time.h>
 //#include "myutils.h"
@@ -43,6 +44,7 @@ namespace MyControllers
 
     using namespace drake; // for all eigen types
     using namespace drake::solvers;
+    using namespace drake::systems::controllers;
 
     class LinearMPCControllerNode
     {

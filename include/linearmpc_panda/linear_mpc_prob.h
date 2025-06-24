@@ -47,8 +47,8 @@ namespace MPCControllers{
 					  double h_env,
 					  int Nt,
 					  RigidTransform<double> X_W_base,
-					  Eigen::MatrixXd Q,
-					  Eigen::MatrixXd R,
+					  Eigen::VectorXd Q,
+					  Eigen::VectorXd R,
 					  Eigen::MatrixXd P,
 					  const MyUtils::ProcessedSolution& processed_refTraj,
 					  const Eigen::VectorXd& u_up,
@@ -112,6 +112,9 @@ namespace MPCControllers{
 		//
 		void Populate_C_for_selecting_du_for_dtau();
 
+		// 
+		void Scale_Q_and_R_by_ref_stddev(Eigen::MatrixXd& Q_scaled, Eigen::MatrixXd& R_scaled);
+
 	private:
 		bool exclude_gravity_;
 		std::string integrator_name_;
@@ -120,7 +123,6 @@ namespace MPCControllers{
 		Eigen::MatrixXd Q_;
 		Eigen::MatrixXd R_;
 		Eigen::MatrixXd P_;
-		//Eigen::VectorXd udot_up_ = {1000, 1000, 1000, 1000, 1000, 1000, 1000};
 		Eigen::VectorXd x_up_;
 		Eigen::VectorXd x_low_;
 		Eigen::VectorXd u_up_;
@@ -129,8 +131,6 @@ namespace MPCControllers{
 		Eigen::VectorXd udot_low_; 
 		AutoDiffVecXd f_grad_;
 		MyUtils::ProcessedSolution processed_refTraj_;
-		//PiecewisePolynomial<double> x_ref_spline_;
-		//PiecewisePolynomial<double> u_ref_spline_;
 
 		Eigen::VectorXd u_entries_;
 		Eigen::VectorXd x_entries_;

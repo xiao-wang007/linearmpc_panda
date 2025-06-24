@@ -13,8 +13,8 @@ namespace MPCControllers {
 				  				 double h_env,
 				  				 int Nt,
 				  				 RigidTransform<double> X_W_base,
-						  		 Eigen::MatrixXd Q,
-						  		 Eigen::MatrixXd R,
+						  		 Eigen::VectorXd Q,
+						  		 Eigen::VectorXd R,
 						  		 Eigen::MatrixXd P,
 								 const MyUtils::ProcessedSolution& processed_refTraj,
 								 const Eigen::VectorXd& u_up,
@@ -60,6 +60,13 @@ namespace MPCControllers {
 		//this create a view, not making a copy
 		auto decVar_flat(Eigen::Map<const VectorDecisionVariable<Eigen::Dynamic>>(temp.data(), temp.size()));
 
+		/* scaling du and dx using: 
+		   u_max - u_ref_average and x_max - x_ref_average, using standard deviation (as my trajectory is dynamic)
+     	   then I don't have to update then in the MPC loop */
+		//compute column-wise mean of the reference trajectory
+		Eigen::MatrixXd Q_scaled, R_scaled;
+		this->Scale_Q_and_R_by_ref_stddev(Q_scaled, R_scaled);
+
 		//TO DO: custom cst and costs bindings
 		// https://stackoverflow.com/questions/65860331/could-you-demo-a-very-simple-c-example-about-symbolic-variable-and-jacobian-by
 		// AN EXAMPLE OF cost and cst bindings
@@ -70,12 +77,13 @@ namespace MPCControllers {
 			auto dx_i = dx_vars_.row(i);
 			auto du_i = du_vars_.row(i);
 
-			// fogot that var goes out of scope created in for loop
+			/* scale du and dx in the cost to have similar magnitude using 
+			(u_max - u_ref)_max and (x_max - x_ref)_max*/
 			auto bx = Eigen::VectorXd::Zero(nx_);
-			auto cost = prog_.AddQuadraticCost(Q_, bx, dx_i);
+			auto cost = prog_.AddQuadraticCost(Q_scaled, bx, dx_i);
 			cost.evaluator()->set_description("Integral cost on s. ");
 			auto bu = Eigen::VectorXd::Zero(nu_);
-			cost = prog_.AddQuadraticCost(R_, bu, du_i);
+			cost = prog_.AddQuadraticCost(R_scaled, bu, du_i);
 			cost.evaluator()->set_description("Integral cost on u. ");
 		}
 
@@ -481,6 +489,35 @@ namespace MPCControllers {
         assert (C_.cols() == Nh_ * (nx_ + nu_) && "C_ cols is not correct!");
 
 	    C_.block(Nh_*(nx_ + nu_ + nx_), 0, nu_*reps, C_.cols()) = Eigen::kroneckerProduct(I_rep, block);
+	}
+
+
+	//######################################################################################
+	void LinearMPCProb::Scale_Q_and_R_by_ref_stddev(Eigen::MatrixXd& Q_scaled, Eigen::MatrixXd& R_scaled)
+	{
+		Eigen::RowVectorXd u_ref_average = processed_refTraj_.trajs.at("us").colwise().mean();
+		Eigen::RowVectorXd q_ref_average = processed_refTraj_.trajs.at("q_panda").colwise().mean();
+		Eigen::RowVectorXd v_ref_average = processed_refTraj_.trajs.at("v_panda").colwise().mean();
+
+		// compute centred reference trajectories
+		Eigen::MatrixXd u_ref_centred = processed_refTraj_.trajs.at("us").rowwise() - u_ref_average;
+		Eigen::MatrixXd q_ref_centred = processed_refTraj_.trajs.at("q_panda").rowwise() - q_ref_average;
+		Eigen::MatrixXd v_ref_centred = processed_refTraj_.trajs.at("v_panda").rowwise() - v_ref_average;
+
+		// compute standard deviation of the reference trajectories
+		Eigen::RowVectorXd u_ref_stddev = (u_ref_centred.array().square().colwise().sum() / (processed_refTraj_.trajs.at("us").rows() - 1)).sqrt();
+		Eigen::RowVectorXd q_ref_stddev = (q_ref_centred.array().square().colwise().sum() / (processed_refTraj_.trajs.at("q_panda").rows() - 1)).sqrt();
+		Eigen::RowVectorXd v_ref_stddev = (v_ref_centred.array().square().colwise().sum() / (processed_refTraj_.trajs.at("v_panda").rows() - 1)).sqrt();
+		Eigen::RowVectorXd x_ref_stddev(nx_);
+		x_ref_stddev << q_ref_stddev, v_ref_stddev;
+
+		Eigen::VectorXd x_stddev_squared = x_ref_stddev.array().square().transpose();
+		Eigen::VectorXd Q_diag_scaled = Q_.array() / x_stddev_squared.array(); // Q/stddev^2
+		Q_scaled = Q_diag_scaled.asDiagonal();
+
+		Eigen::VectorXd u_stddev_squared = u_ref_stddev.array().square().transpose();
+		Eigen::VectorXd R_diag_scaled = R_.array() / u_stddev_squared.array(); // R/stddev^2
+		R_scaled = R_diag_scaled.asDiagonal();
 	}
 
 

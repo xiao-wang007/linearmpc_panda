@@ -198,9 +198,16 @@ namespace MyControllers
         }
 
         //make P
-        P_ = Eigen::MatrixXd::Identity(nx_, nx_) * 100;
+        Eigen::MatrixXd Af, Bf;
+        Eigen::VectorXd x_f(nx_);
+        x_f << data_proc_.trajs.at("q_panda").row(N_-1).transpose(), 
+                data_proc_.trajs.at("v_panda").row(N_-1).transpose();
+        auto u_f = data_proc_.trajs.at("us").row(N_-1).transpose();
+        this->LinearizeAtReference(prob_, x_f, u_f, Af, Bf);
 
-
+        LinearQuadraticRegulatorResult K_and_S = LinearQuadraticRegulator(Af, Bf, Q_, R_);
+        P_ = K_and_S.S; // P is the solution to the discrete-time algebraic Riccati equation (DARE)
+        //P_ = Eigen::MatrixXd::Identity(nx_, nx_) * 100;
 
         /* If data_proc_.trajs.at("q_panda") is an Eigen::MatrixXd, then .row(0) returns an Eigen 
         row vector of type Eigen::Matrix<double, 1, Eigen::Dynamic>. If you assign this directly 
@@ -219,8 +226,6 @@ namespace MyControllers
         q_init_desired_msg.position = std::vector<double>(q_init_desired_.data(), q_init_desired_.data() + q_init_desired_.size());
         q_init_desired_pub_.publish(q_init_desired_msg);
         ROS_INFO_STREAM("Published initial desired joint state: " << q_init_desired_);
-
-
 
         /* have to do this to avoid DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN() assertion as 
             I have a MultibodyPlant() inside LinearMPCProb()*/
