@@ -186,31 +186,6 @@ install(TARGETS linearmpc_panda
 ## add nodes ##
 ###############
 #################################################################################################
-# add mpc_solver_node executable
-add_executable(mpc_solver_node 
-               src/mpc_solver_node.cc
-               )
-# link the executable wot the required libraries
-target_link_libraries(mpc_solver_node 
-                      ${catkin_LIBRARIES} 
-                      Eigen3::Eigen 
-                      drake::drake
-                      linear_mpc_prob
-                      myutils)
-
-# add dependencies to ensure proper build order
-add_dependencies(mpc_solver_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
-
-# include the header files
-target_include_directories(mpc_solver_node PUBLIC
-        include
-        external/cnpy
-        )
-# install the executable
-install(TARGETS mpc_solver_node
-        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-
-#################################################################################################
 # Add mpc_executor_node executable
 add_executable(mpc_executor_node 
                src/mpc_executor_node.cc

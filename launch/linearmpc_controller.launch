@@ -1,0 +1,4 @@
+<launch>
+    <rosparam file="$(find linearmpc_panda)/config/linearmpc_controller_params.yaml" />
+    <node name="linearmpc_controller_node" pkg="linearmpc_panda" type="linearmpc_controller" output="screen" />
+</launch>

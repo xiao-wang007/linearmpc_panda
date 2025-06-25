@@ -16,6 +16,8 @@
 #include <drake/multibody/parsing/parser.h>
 #include <drake/math/autodiff.h>
 #include <drake/common/trajectories/piecewise_polynomial.h>
+#include <drake/systems/controllers/linear_quadratic_regulator.h>
+#include <drake/common/drake_assert.h>
 
 namespace MPCControllers{
 	//
@@ -30,6 +32,7 @@ namespace MPCControllers{
 
 	using namespace drake; // for all eigen types
 	using namespace drake::solvers;
+    using namespace drake::systems::controllers;
 	
 
 	//
@@ -40,16 +43,15 @@ namespace MPCControllers{
 		LinearMPCProb(const std::string& plant_file,
 					  const std::string& integrator_name,
 					  bool exclude_gravity,
+					  int N,
 					  int nx, 
 					  int nu, 
-					  double execution_length,
 					  double h_mpc,
 					  double h_env,
 					  int Nt,
 					  RigidTransform<double> X_W_base,
-					  Eigen::VectorXd Q,
-					  Eigen::VectorXd R,
-					  Eigen::MatrixXd P,
+					  Eigen::VectorXd Q_diag_vec,
+					  Eigen::VectorXd R_diag_vec,
 					  const MyUtils::ProcessedSolution& processed_refTraj,
 					  const Eigen::VectorXd& u_up,
 					  const Eigen::VectorXd& u_low,
@@ -115,13 +117,17 @@ namespace MPCControllers{
 		// 
 		void Scale_Q_and_R_by_ref_stddev(Eigen::MatrixXd& Q_scaled, Eigen::MatrixXd& R_scaled);
 
+		//
+		void LinearizeAtReference(const Eigen::VectorXd& x_ref, const Eigen::VectorXd& u_ref,
+								  Eigen::MatrixXd& A, Eigen::MatrixXd& B);
+
 	private:
 		bool exclude_gravity_;
 		std::string integrator_name_;
-		int nx_, nu_, Nt_, Nh_;
-		double h_mpc_, h_env_, execution_length_, mpc_horizon_;
-		Eigen::MatrixXd Q_;
-		Eigen::MatrixXd R_;
+		int nx_, nu_, Nt_, Nh_, N_;
+		double h_mpc_, h_env_, mpc_horizon_;
+		Eigen::VectorXd Q_diag_vec_;
+		Eigen::VectorXd R_diag_vec_;
 		Eigen::MatrixXd P_;
 		Eigen::VectorXd x_up_;
 		Eigen::VectorXd x_low_;

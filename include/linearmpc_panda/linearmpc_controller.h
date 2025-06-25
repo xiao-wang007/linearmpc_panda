@@ -96,15 +96,15 @@ namespace MyControllers
         int nx_ {14}; 
         int nq_ {7};
         int nu_ {7}; 
-        int Nh_ {5}; 
-        int n_exe_steps_ {2};
+        int Nh_ {4}; 
+        double n_exe_steps_ {1.5};
         double h_env_ {0.001}; //sim and panda control freq
         double h_mpc_{0.02};
         int Nt_ {}; // including x0 
-        double execution_length_ {};
+        //double execution_length_ {};
         double mpc_horizon_ {};
-        Eigen::MatrixXd Q_;
-        Eigen::MatrixXd R_;
+        Eigen::VectorXd Q_diag_vec_;
+        Eigen::VectorXd R_diag_vec_;
         Eigen::MatrixXd P_;
         Eigen::VectorXd u_up_ {};
         Eigen::VectorXd u_low_{};

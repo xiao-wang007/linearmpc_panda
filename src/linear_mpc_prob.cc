@@ -6,16 +6,15 @@ namespace MPCControllers {
 	LinearMPCProb::LinearMPCProb(const std::string& plant_file,
 			                     const std::string& integrator,	
 								 bool exclude_gravity,
+								 int N,
 				  				 int nx, 
 				  				 int nu, 
-				  				 double execution_length,
 				  				 double h_mpc,
 				  				 double h_env,
 				  				 int Nt,
 				  				 RigidTransform<double> X_W_base,
-						  		 Eigen::VectorXd Q,
-						  		 Eigen::VectorXd R,
-						  		 Eigen::MatrixXd P,
+						  		 Eigen::VectorXd Q_diag_vec,
+						  		 Eigen::VectorXd R_diag_vec,
 								 const MyUtils::ProcessedSolution& processed_refTraj,
 								 const Eigen::VectorXd& u_up,
 								 const Eigen::VectorXd& u_low,
@@ -23,8 +22,8 @@ namespace MPCControllers {
 								 const Eigen::VectorXd& x_low,
 				  				 const Eigen::VectorXd& u_entries,
 								 const Eigen::VectorXd& x_entries)
-		  : nx_(nx), nu_(nu), h_mpc_(h_mpc), h_env_(h_env), Nt_(Nt), 
-		    Nh_(Nt - 1), execution_length_(execution_length), Q_(Q), R_(R), P_(P),
+		  : nx_(nx), nu_(nu), h_mpc_(h_mpc), h_env_(h_env), Nt_(Nt), N_(N),
+		    Nh_(Nt - 1), Q_diag_vec_(Q_diag_vec), R_diag_vec_(R_diag_vec), 
 			processed_refTraj_(processed_refTraj), integrator_name_(integrator), exclude_gravity_(exclude_gravity),
 			u_entries_(u_entries), x_entries_(x_entries), u_up_(u_up), u_low_(u_low), x_up_(x_up), x_low_(x_low)
 	{ 
@@ -43,8 +42,11 @@ namespace MPCControllers {
 		contextAD_ptr_ = plantAD_ptr_->CreateDefaultContext();
 		context_ptr_ = plant_ptr_->CreateDefaultContext();
 
+
 		//
+		udot_up_.resize(nu_);
 		udot_up_ = Eigen::VectorXd::Constant(nu_, 1000.0);
+		udot_low_.resize(nu_);
 		udot_low_ = -udot_up_;
 
 		//initialize the prog
@@ -55,6 +57,7 @@ namespace MPCControllers {
 		/* flatten the decision variables */
 		MatrixDecisionVariable<Eigen::Dynamic, Eigen::Dynamic> temp(du_vars_.rows(), 
 																	du_vars_.cols() + dx_vars_.cols());
+		/* flatten the decision variables */
 		temp << du_vars_, dx_vars_;
 
 		//this create a view, not making a copy
@@ -86,6 +89,28 @@ namespace MPCControllers {
 			cost = prog_.AddQuadraticCost(R_scaled, bu, du_i);
 			cost.evaluator()->set_description("Integral cost on u. ");
 		}
+
+        //make P
+        Eigen::MatrixXd Af, Bf;
+        Eigen::VectorXd x_f(nx_);
+        x_f << processed_refTraj_.trajs.at("q_panda").row(N_-1).transpose(), 
+               processed_refTraj_.trajs.at("v_panda").row(N_-1).transpose();
+        auto u_f = processed_refTraj_.trajs.at("us").row(N_-1).transpose();
+        this->LinearizeAtReference(x_f, u_f, Af, Bf);
+
+		// Q_scaled and R_scaled must be positive semidefinite matrices
+		std::cout << "Scaled Q: \n" << Q_scaled << std::endl;
+		std::cout << "Scaled R: \n" << R_scaled << std::endl;
+
+		assert(!Q_scaled.hasNaN() && "Q_scaled has NaN values!");
+		DRAKE_DEMAND(Q_scaled.allFinite() && "Q_scaled must be finite!");
+		assert(!R_scaled.hasNaN() && "R_scaled has NaN values!");
+		DRAKE_DEMAND(R_scaled.allFinite() && "R_scaled must be finite!");
+
+        LinearQuadraticRegulatorResult K_and_S = DiscreteTimeLinearQuadraticRegulator(Af, Bf, Q_scaled, R_scaled);
+        P_ = K_and_S.S; // P is the solution to the discrete-time algebraic Riccati equation (DARE)
+		assert(!P_.hasNaN() && "P_ has NaN values!");
+        //P_ = Eigen::MatrixXd::Identity(nx_, nx_) * 100;
 
 		// add terminal cost
 		auto dx_f = dx_vars_.row(Nh_ - 1);
@@ -249,6 +274,7 @@ namespace MPCControllers {
 		assert(xi.size() == nx_ && "xi dim is not the same as nx_!");
 		assert(yi->size() == nx_ && "yi dim is not the same as nx_");
 		AutoDiffVecXd f(nx_); 
+
 		this->f_ad(xi, ui, &f);
 		*yi = xi + h_mpc_ * f;
 	}
@@ -495,29 +521,53 @@ namespace MPCControllers {
 	//######################################################################################
 	void LinearMPCProb::Scale_Q_and_R_by_ref_stddev(Eigen::MatrixXd& Q_scaled, Eigen::MatrixXd& R_scaled)
 	{
-		Eigen::RowVectorXd u_ref_average = processed_refTraj_.trajs.at("us").colwise().mean();
-		Eigen::RowVectorXd q_ref_average = processed_refTraj_.trajs.at("q_panda").colwise().mean();
-		Eigen::RowVectorXd v_ref_average = processed_refTraj_.trajs.at("v_panda").colwise().mean();
+		Eigen::RowVectorXd du_average = (processed_refTraj_.trajs.at("us").rowwise() - u_up_.transpose()).colwise().mean();
+		Eigen::RowVectorXd dq_average = (processed_refTraj_.trajs.at("q_panda").rowwise() - x_up_.transpose().head(nu_)).colwise().mean();
+		Eigen::RowVectorXd dv_average = (processed_refTraj_.trajs.at("v_panda").rowwise() - x_up_.transpose().tail(nu_)).colwise().mean();
 
-		// compute centred reference trajectories
-		Eigen::MatrixXd u_ref_centred = processed_refTraj_.trajs.at("us").rowwise() - u_ref_average;
-		Eigen::MatrixXd q_ref_centred = processed_refTraj_.trajs.at("q_panda").rowwise() - q_ref_average;
-		Eigen::MatrixXd v_ref_centred = processed_refTraj_.trajs.at("v_panda").rowwise() - v_ref_average;
+		std::cout << "u_ref_average: " << du_average << std::endl;
+		std::cout << "q_ref_average: " << dq_average << std::endl;
+		std::cout << "v_ref_average: " << dv_average << std::endl;
+		std::cout << '\n' << std::endl;
 
-		// compute standard deviation of the reference trajectories
-		Eigen::RowVectorXd u_ref_stddev = (u_ref_centred.array().square().colwise().sum() / (processed_refTraj_.trajs.at("us").rows() - 1)).sqrt();
-		Eigen::RowVectorXd q_ref_stddev = (q_ref_centred.array().square().colwise().sum() / (processed_refTraj_.trajs.at("q_panda").rows() - 1)).sqrt();
-		Eigen::RowVectorXd v_ref_stddev = (v_ref_centred.array().square().colwise().sum() / (processed_refTraj_.trajs.at("v_panda").rows() - 1)).sqrt();
-		Eigen::RowVectorXd x_ref_stddev(nx_);
-		x_ref_stddev << q_ref_stddev, v_ref_stddev;
+		Eigen::RowVectorXd u_average_squared_error = du_average.array().square();
+		Eigen::RowVectorXd x_average_squared_error(nx_);
+		x_average_squared_error << dq_average.array().square(), dv_average.array().square();
 
-		Eigen::VectorXd x_stddev_squared = x_ref_stddev.array().square().transpose();
-		Eigen::VectorXd Q_diag_scaled = Q_.array() / x_stddev_squared.array(); // Q/stddev^2
-		Q_scaled = Q_diag_scaled.asDiagonal();
+		Q_scaled = (1. / x_average_squared_error.array()).matrix().asDiagonal();
+		R_scaled = (1. / u_average_squared_error.array()).matrix().asDiagonal();
 
-		Eigen::VectorXd u_stddev_squared = u_ref_stddev.array().square().transpose();
-		Eigen::VectorXd R_diag_scaled = R_.array() / u_stddev_squared.array(); // R/stddev^2
-		R_scaled = R_diag_scaled.asDiagonal();
+		std::cout << "Scaled Q: \n" << Q_scaled << std::endl;
+		std::cout << "Scaled R: \n" << R_scaled << std::endl;
+
+		//// compute centred reference trajectories
+		//Eigen::MatrixXd u_ref_centred = processed_refTraj_.trajs.at("us").rowwise() - u_ref_average;
+		//Eigen::MatrixXd q_ref_centred = processed_refTraj_.trajs.at("q_panda").rowwise() - q_ref_average;
+		//Eigen::MatrixXd v_ref_centred = processed_refTraj_.trajs.at("v_panda").rowwise() - v_ref_average;
+
+		//std::cout << "u_ref_centred: \n" << u_ref_centred << std::endl;
+		//std::cout << "q_ref_centred: \n" << q_ref_centred << std::endl;
+		//std::cout << "v_ref_centred: \n" << v_ref_centred << std::endl;
+		//std::cout << '\n' << std::endl;
+
+		//// compute standard deviation of the reference trajectories
+		//Eigen::RowVectorXd u_ref_stddev = (u_ref_centred.array().square().colwise().sum() / (processed_refTraj_.trajs.at("us").rows() - 1)).sqrt();
+		//Eigen::RowVectorXd q_ref_stddev = (q_ref_centred.array().square().colwise().sum() / (processed_refTraj_.trajs.at("q_panda").rows() - 1)).sqrt();
+		//Eigen::RowVectorXd v_ref_stddev = (v_ref_centred.array().square().colwise().sum() / (processed_refTraj_.trajs.at("v_panda").rows() - 1)).sqrt();
+		//Eigen::RowVectorXd x_ref_stddev(nx_);
+		//x_ref_stddev << q_ref_stddev, v_ref_stddev;
+
+		//std::cout << "u_ref_stddev: \n" << u_ref_stddev << std::endl;
+		//std::cout << "x_ref_stddev: \n" << x_ref_stddev << std::endl;
+		//std::cout << '\n' << std::endl;
+
+		//Eigen::VectorXd x_stddev_squared = x_ref_stddev.array().square().transpose();
+		//Eigen::VectorXd Q_diag_scaled = Q_diag_vec_.array() / x_stddev_squared.array(); // Q/stddev^2
+		//Q_scaled = Q_diag_scaled.asDiagonal();
+
+		//Eigen::VectorXd u_stddev_squared = u_ref_stddev.array().square().transpose();
+		//Eigen::VectorXd R_diag_scaled = R_diag_vec_.array() / u_stddev_squared.array(); // R/stddev^2
+		//R_scaled = R_diag_scaled.asDiagonal();
 	}
 
 
@@ -557,6 +607,11 @@ namespace MPCControllers {
 		    this->Build_C_d_for_solver_errCoord<&LinearMPCProb::RK4>(current_state, 
 																x_ref_horizon, u_ref_horizon);
 		}
+
+		//assert to debug for nans in QP 
+		assert(!C_.hasNaN() && "C_ has NaN values!");
+		assert(!lb_.hasNaN() && "lb_ has NaN values!");
+		assert(!ub_.hasNaN() && "ub_ has NaN values!");
 
 		// evaluator() returns a shared_ptr<LinearConstraint>
 		this->cst_->evaluator()->UpdateCoefficients(C_, lb_, ub_); 
@@ -613,6 +668,7 @@ namespace MPCControllers {
 			return;
 		}
 
+
 		// evaluator() returns a shared_ptr<LinearConstraint>
 		this->cst_->evaluator()->UpdateCoefficients(C_, lb_, ub_); 
 
@@ -653,6 +709,30 @@ namespace MPCControllers {
 
 		output = u_ref_cmd_;
 	}
+
+    //###############################################################################
+    void LinearMPCProb::LinearizeAtReference(const Eigen::VectorXd& x_ref,
+                                             const Eigen::VectorXd& u_ref,
+                                             Eigen::MatrixXd& A,
+                                             Eigen::MatrixXd& B)
+    {
+        AutoDiffVecXd f_N(nx_);
+        auto xN_ad = math::InitializeAutoDiff(x_ref, nx_+nu_, 0);
+        auto uN_ad = math::InitializeAutoDiff(u_ref, nx_+nu_, nx_); // 3rd arg, grad starting index 
+
+        if (integrator_name_ == "RK4")
+        {
+            this->RK4(xN_ad, uN_ad, &f_N);
+        } else {
+            this->Euler(xN_ad, uN_ad, &f_N);
+        }
+
+        auto fN_grad = math::ExtractGradient(f_N);
+
+        assert((fN_grad.cols() == nx_+nu_ && fN_grad.rows() == nx_) && "fN_grad dim is wrong!");
+        A = fN_grad.block(0, 0, nx_, nx_);
+        B = fN_grad.block(0, nx_, nx_, nu_);
+    }
 
 
 	//######################################################################################

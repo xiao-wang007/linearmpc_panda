@@ -34,19 +34,11 @@ namespace MyControllers
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter h_mpc_.");
             throw std::runtime_error("Failed to initialize LinearMPCControllerNode: h_mpc_ parameter not set.");
         }
-        
-        //
-        if (!nh_.getParam("# of execution steps", n_exe_steps_))
-        {
-            ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter n_exe_steps_.");
-            throw std::runtime_error("Failed to initialize LinearMPCControllerNode: n_exe_steps_ parameter not set.");
-        }
-        execution_length_ = h_mpc_ * n_exe_steps_;
         mpc_horizon_ = h_mpc_ * Nh_;
 
         // set up the upper and lower bounds for u and x
         std::vector<double> u_up_vec;
-        if (!nh_.getParam("u upper bounds", u_up_vec))
+        if (!nh_.getParam("u_upper_bounds", u_up_vec))
         {
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter u_up_.");
             throw std::runtime_error("Failed to initialize LinearMPCControllerNode: u_up_ not set.");
@@ -57,7 +49,7 @@ namespace MyControllers
 
         //
         std::vector<double> u_low_vec;
-        if (!nh_.getParam("u lower bounds", u_low_vec))
+        if (!nh_.getParam("u_lower_bounds", u_low_vec))
         {
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter u_low_.");
             throw std::runtime_error("Failed to initialize LinearMPCControllerNode: u_low_ not set.");
@@ -68,7 +60,7 @@ namespace MyControllers
 
         //
         std::vector<double> x_up_vec;
-        if (!nh_.getParam("x up bounds", x_up_vec))
+        if (!nh_.getParam("x_up_bounds", x_up_vec))
         {
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter x_up_.");
             throw std::runtime_error("Failed to initialize LinearMPCControllerNode: x_up_ not set.");
@@ -77,9 +69,10 @@ namespace MyControllers
         //x_up_.resize(nx_);
         //x_up_ << 2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973, 2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61;
 
+
         //
         std::vector<double> x_low_vec;
-        if (!nh_.getParam("x low bounds", x_low_vec))
+        if (!nh_.getParam("x_low_bounds", x_low_vec))
         {
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter x_low_.");
             throw std::runtime_error("Failed to initialize LinearMPCControllerNode: x_low_ not set.");
@@ -90,7 +83,7 @@ namespace MyControllers
 
         //
         std::vector<double> x_entries_vec;
-        if (!nh_.getParam("x entries", x_entries_vec))
+        if (!nh_.getParam("x_entries", x_entries_vec))
         {
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter x_entries.");
             throw std::runtime_error("Failed to initialize LinearMPCControllerNode: x_entries not set.");
@@ -100,7 +93,7 @@ namespace MyControllers
 
         //
         std::vector<double> u_entries_vec;
-        if (!nh_.getParam("u entries", u_entries_vec))
+        if (!nh_.getParam("u_entries", u_entries_vec))
         {
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter u_entries.");
             throw std::runtime_error("Failed to initialize LinearMPCControllerNode: u_entries not set.");
@@ -110,13 +103,13 @@ namespace MyControllers
 
         //
         std::vector<double> roll_pitch_yaw_vec;
-        if (!nh_.getParam("base roll_pitch_yaw", roll_pitch_yaw_vec))
+        if (!nh_.getParam("base_roll_pitch_yaw", roll_pitch_yaw_vec))
         {
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter roll_pitch_yaw.");
             throw std::runtime_error("Failed to initialize LinearMPCControllerNode: roll_pitch_yaw not set.");
         }
         std::vector<double> position_vec;
-        if (!nh_.getParam("base position", position_vec))
+        if (!nh_.getParam("base_position", position_vec))
         {
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter base position.");
             throw std::runtime_error("Failed to initialize LinearMPCControllerNode: base position not set.");
@@ -130,14 +123,12 @@ namespace MyControllers
 
         //make Q
         std::vector<double> Q_diag_vec;
-        if (!nh_.getParam("Q matrix coeffs", Q_diag_vec))
+        if (!nh_.getParam("Q_matrix_coeffs", Q_diag_vec))
         {
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter Q matrix coeffs.");
             throw std::runtime_error("Failed to initialize LinearMPCControllerNode: Q matrix coeffs not set.");
         }
-        Eigen::VectorXd Q_diag = Eigen::Map<Eigen::VectorXd>(Q_diag_vec.data(), Q_diag_vec.size());
-        Eigen::DiagonalMatrix<double, NUM_JOINTS*2> Q_sparse = Q_diag.asDiagonal();
-        Q_ = Q_sparse.toDenseMatrix();
+        Q_diag_vec_ = Eigen::Map<Eigen::VectorXd>(Q_diag_vec.data(), Q_diag_vec.size());
 
         ////Eigen::VectorXd q_coef = Eigen::VectorXd::Constant(nu_, 200.0) * 12.;
         ////Eigen::VectorXd v_coef = Eigen::VectorXd::Constant(nu_, 1.) * 0.1;
@@ -151,14 +142,12 @@ namespace MyControllers
 
         //make R
         std::vector<double> R_diag_vec;
-        if (!nh_.getParam("R matrix coeffs", R_diag_vec))
+        if (!nh_.getParam("R_matrix_coeffs", R_diag_vec))
         {
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter R matrix coeffs.");
             throw std::runtime_error("Failed to initialize LinearMPCControllerNode: R matrix coeffs not set.");
         }
-        Eigen::VectorXd R_diag = Eigen::Map<Eigen::VectorXd>(R_diag_vec.data(), R_diag_vec.size());
-        Eigen::DiagonalMatrix<double, NUM_JOINTS*2> R_sparse = R_diag.asDiagonal();
-        R_ = R_sparse.toDenseMatrix();
+        R_diag_vec_ = Eigen::Map<Eigen::VectorXd>(R_diag_vec.data(), R_diag_vec.size());
         ////Eigen::VectorXd u_coef = Eigen::VectorXd::Constant(nu_, 0.001);
         //Eigen::VectorXd u_coef = Eigen::VectorXd::Constant(nu_, 10);
         //R_ = u_coef.asDiagonal();
@@ -197,18 +186,6 @@ namespace MyControllers
             data_proc_ = MyUtils::ProcessSolTraj(ref_traj_path_ , var_names_, dims_, times_);
         }
 
-        //make P
-        Eigen::MatrixXd Af, Bf;
-        Eigen::VectorXd x_f(nx_);
-        x_f << data_proc_.trajs.at("q_panda").row(N_-1).transpose(), 
-                data_proc_.trajs.at("v_panda").row(N_-1).transpose();
-        auto u_f = data_proc_.trajs.at("us").row(N_-1).transpose();
-        this->LinearizeAtReference(prob_, x_f, u_f, Af, Bf);
-
-        LinearQuadraticRegulatorResult K_and_S = LinearQuadraticRegulator(Af, Bf, Q_, R_);
-        P_ = K_and_S.S; // P is the solution to the discrete-time algebraic Riccati equation (DARE)
-        //P_ = Eigen::MatrixXd::Identity(nx_, nx_) * 100;
-
         /* If data_proc_.trajs.at("q_panda") is an Eigen::MatrixXd, then .row(0) returns an Eigen 
         row vector of type Eigen::Matrix<double, 1, Eigen::Dynamic>. If you assign this directly 
         to an Eigen::VectorXd, it can cause all elements to be set to the first value (due to 
@@ -229,20 +206,18 @@ namespace MyControllers
 
         /* have to do this to avoid DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN() assertion as 
             I have a MultibodyPlant() inside LinearMPCProb()*/
-        std::cout << "checking here then 3 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
         prob_ = std::make_unique<MPCControllers::LinearMPCProb>(panda_file_, 
                                                                 integrator_, 
                                                                 exclude_gravity_,
+                                                                N_,
                                                                 nx_, 
                                                                 nu_, 
-                                                                execution_length_, 
                                                                 h_mpc_, 
                                                                 h_env_,
                                                                 Nt_, 
                                                                 X_W_base_, 
-                                                                Q_, 
-                                                                R_, 
-                                                                P_, 
+                                                                Q_diag_vec_, 
+                                                                R_diag_vec_, 
                                                                 data_proc_, 
                                                                 u_up_, 
                                                                 u_low_, 
@@ -250,7 +225,7 @@ namespace MyControllers
                                                                 x_low_, 
                                                                 u_entries_, 
                                                                 x_entries_); 
-        std::cout << "checking here then 4 !!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+
 
         //init solver output
         latest_mpc_sol_ = Eigen::MatrixXd::Zero(nu_, Nh_);
@@ -396,7 +371,7 @@ namespace MyControllers
             rate.sleep();
         }
 
-        ros::Time mpc_t_start_ = ros::Time::now();
+        mpc_t_start_ = ros::Time::now();
 
         //start solver in a separate thread
         std::thread solver_thread (
@@ -413,6 +388,7 @@ namespace MyControllers
                             auto end = std::chrono::high_resolution_clock::now();
                             std::chrono::duration<double> elapsed = end - start;
                             std::cout << "[linearmpc_controller] solve_and_update took: " << elapsed.count() << " seconds." << std::endl;
+                            std::cout << "Current time: " << (ros::Time::now() - mpc_t_start_).toSec() << " seconds." << std::endl;
                         } 
                         catch (const std::bad_alloc& e) 
                         {
@@ -470,29 +446,6 @@ namespace MyControllers
 		return true;  // or false, depending on your logic
 	}
 
-    //###############################################################################
-    void LinearMPCControllerNode::LinearizeAtReference(std::unique_ptr<MPCControllers::LinearMPCProb>& prob,
-                                                       const Eigen::VectorXd& x_ref,
-                                                       const Eigen::VectorXd& u_ref,
-                                                       Eigen::MatrixXd& A,
-                                                       Eigen::MatrixXd& B)
-    {
-        AutoDiffVecXd f_N(nx_);
-        auto xN_ad = math::InitializeAutoDiff(x_ref, nx_+nu_, 0);
-        auto uN_ad = math::InitializeAutoDiff(u_ref, nx_+nu_, nx_); // 3rd arg, grad starting index 
-        auto fN_grad = math::ExtractGradient(f_N);
-
-        if (integrator_ == "RK4")
-        {
-            prob->RK4(xN_ad, uN_ad, &f_N);
-        } else {
-            prob->Euler(xN_ad, uN_ad, &f_N);
-        }
-
-        assert((fN_grad.cols() == nx_+nu_ && fN_grad.rows() == nx_) && "fN_grad dim is wrong!");
-        A = fN_grad.block(0, 0, nx_, nx_);
-        B = fN_grad.block(0, nx_, nx_, nu_);
-    }
 }
 
 int main(int argc, char** argv)
