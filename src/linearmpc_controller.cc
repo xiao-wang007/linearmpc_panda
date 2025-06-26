@@ -21,6 +21,20 @@ namespace MyControllers
         }
 
         //
+        if (!nh_.getParam("decVar_bounds_on", decVar_bounds_on_))
+        {
+            ROS_INFO("LinearMPCControllerNode: decVar_bounds_on_ not set, defaulting to true.");
+            decVar_bounds_on_ = true; // default value
+        }
+
+        //
+        if (!nh_.getParam("udot_bounds_on", udot_bounds_on_))
+        {
+            ROS_INFO("LinearMPCControllerNode: udot_bounds_on_ not set, defaulting to true.");
+            udot_bounds_on_ = true; // default value
+        }
+
+        //
         if (!nh_.getParam("Nh", Nh_))
         {
             ROS_ERROR_STREAM("LinearMPCControllerNode: Failed to get parameter Nh_.");
@@ -209,6 +223,8 @@ namespace MyControllers
         prob_ = std::make_unique<MPCControllers::LinearMPCProb>(panda_file_, 
                                                                 integrator_, 
                                                                 exclude_gravity_,
+                                                                decVar_bounds_on_,
+                                                                udot_bounds_on_,
                                                                 N_,
                                                                 nx_, 
                                                                 nu_, 
@@ -274,16 +290,21 @@ namespace MyControllers
         state_now_ << local_q_now, v_now_filtered_; // these are updated in the subcription callback
         std::cout << "q_now: " << local_q_now.transpose() << std::endl;
 
+		DRAKE_DEMAND(!state_now_.hasNaN() && "state_now_ has NaN values!");
+
         auto t_now = ros::Time::now();
         // auto t_now_chro = std::chrono::high_resolution_clock::now();
         // current_time_ = std::chrono::duration_cast<std::chrono::duration<double>>(t_now_chro - t_start_node_).count();
+        std::cout << '\n' << std::endl;
         auto current_time = (t_now - mpc_t_start_).toSec();
         std::cout << "[linearmpc_controller] time lapsed since node started: " << current_time << std::endl;
 
         prob_->Solve_and_update_C_d_for_solver_errCoord(state_now_, current_time); // takes 0.22~0.245s
 
         prob_->Get_solution(latest_mpc_sol_); //Pass by argument
-        std::cout << "[linearmpc_controller] latest_mpc_sol_: \n" << latest_mpc_sol_ << std::endl;
+
+        //std::cout << "[linearmpc_controller] latest_mpc_sol_: \n" << latest_mpc_sol_ << std::endl;
+
         u_cmd_spline_ = drake::trajectories::PiecewisePolynomial<double>::FirstOrderHold(
                 Eigen::VectorXd::LinSpaced(Nh_, current_time, current_time + mpc_horizon_), latest_mpc_sol_);
     }
@@ -381,14 +402,14 @@ namespace MyControllers
                     {
                         try 
                         { 
-                            auto start = std::chrono::high_resolution_clock::now();
+                            //auto start = std::chrono::high_resolution_clock::now();
 
                             solve_and_update(); 
 
-                            auto end = std::chrono::high_resolution_clock::now();
-                            std::chrono::duration<double> elapsed = end - start;
-                            std::cout << "[linearmpc_controller] solve_and_update took: " << elapsed.count() << " seconds." << std::endl;
-                            std::cout << "Current time: " << (ros::Time::now() - mpc_t_start_).toSec() << " seconds." << std::endl;
+                            //auto end = std::chrono::high_resolution_clock::now();
+                            //std::chrono::duration<double> elapsed = end - start;
+                            //std::cout << "[linearmpc_controller] solve_and_update took: " << elapsed.count() << " seconds." << std::endl;
+                            //std::cout << "Current time: " << (ros::Time::now() - mpc_t_start_).toSec() << " seconds." << std::endl;
                         } 
                         catch (const std::bad_alloc& e) 
                         {

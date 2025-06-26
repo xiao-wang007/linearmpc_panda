@@ -6,6 +6,8 @@ namespace MPCControllers {
 	LinearMPCProb::LinearMPCProb(const std::string& plant_file,
 			                     const std::string& integrator,	
 								 bool exclude_gravity,
+								 bool decVar_bounds_on,
+								 bool udot_bounds_on,
 								 int N,
 				  				 int nx, 
 				  				 int nu, 
@@ -25,7 +27,8 @@ namespace MPCControllers {
 		  : nx_(nx), nu_(nu), h_mpc_(h_mpc), h_env_(h_env), Nt_(Nt), N_(N),
 		    Nh_(Nt - 1), Q_diag_vec_(Q_diag_vec), R_diag_vec_(R_diag_vec), 
 			processed_refTraj_(processed_refTraj), integrator_name_(integrator), exclude_gravity_(exclude_gravity),
-			u_entries_(u_entries), x_entries_(x_entries), u_up_(u_up), u_low_(u_low), x_up_(x_up), x_low_(x_low)
+			u_entries_(u_entries), x_entries_(x_entries), u_up_(u_up), u_low_(u_low), x_up_(x_up), x_low_(x_low),
+			decVar_bounds_on_(decVar_bounds_on), udot_bounds_on_(udot_bounds_on)
 	{ 
 		mpc_horizon_ = h_mpc_ * Nh_;
 		/*make the plant for the controller with arm only, 
@@ -126,16 +129,24 @@ namespace MPCControllers {
 		   du bounds,
 		   dx bounds,
 		   dtau bounds*/ 
-		C_rows_ = Nh_*nx_ + Nh_*nu_ + Nh_*nx_ + (Nh_-1)*nu_;
+		if (decVar_bounds_on_)
+		{
+			C_rows_ = Nh_*nx_ + Nh_*nu_ + Nh_*nx_ + (Nh_-1)*nu_;
+			C_ = Eigen::MatrixXd::Zero(C_rows_, C_cols_);
 
-		C_ = Eigen::MatrixXd::Zero(C_rows_, C_cols_);
+			// call member function to populate C_ for selecting decision variables
+			this->Populate_C_for_selecting_decision_variables(x_entries_, u_entries_);
+
+			// call member function to populate C_ for selecting du for dtau
+			this->Populate_C_for_selecting_du_for_dtau();
+
+		} else if (udot_bounds_on_){
+			C_rows_ = Nh_*nx_ + (Nh_-1)*nu_;
+			C_ = Eigen::MatrixXd::Zero(C_rows_, C_cols_);
+			this->Populate_C_for_selecting_du_for_dtau();
+		}
+
 		C_.block(0, nu_, nx_, nx_) = Eigen::MatrixXd::Identity(nx_, nx_);
-
-		// call member function to populate C_ for selecting decision variables
-		this->Populate_C_for_selecting_decision_variables(x_entries_, u_entries_);
-
-		// call member function to populate C_ for selecting du for dtau
-  		this->Populate_C_for_selecting_du_for_dtau();
 
 		lb_ = Eigen::VectorXd::Zero(C_rows_);
 		ub_ = Eigen::VectorXd::Zero(C_rows_);
@@ -424,40 +435,52 @@ namespace MPCControllers {
 			ub_.segment(Nh_*(nx_+nu_) + i*nx_, nx_) = (x_up_ - x_ref.col(i)); 
 		} */
 
-		/* using kroneckerProduct to do the same */ 
-		Eigen::VectorXd u_up_full = Eigen::kroneckerProduct(Eigen::VectorXd::Ones(Nh_), u_up_);
-		auto u_low_full = -u_up_full;
+		if (decVar_bounds_on_)
+		{
+			/* using kroneckerProduct to do the same */ 
+			Eigen::VectorXd u_up_full = Eigen::kroneckerProduct(Eigen::VectorXd::Ones(Nh_), u_up_);
+			auto u_low_full = -u_up_full;
 
-		Eigen::VectorXd x_up_full = Eigen::kroneckerProduct(Eigen::VectorXd::Ones(Nh_), x_up_);
-		Eigen::VectorXd x_low_full = Eigen::kroneckerProduct(Eigen::VectorXd::Ones(Nh_), x_low_);
+			Eigen::VectorXd x_up_full = Eigen::kroneckerProduct(Eigen::VectorXd::Ones(Nh_), x_up_);
+			Eigen::VectorXd x_low_full = Eigen::kroneckerProduct(Eigen::VectorXd::Ones(Nh_), x_low_);
 
-		// x_ref_flat is a new copy of column-wise concatenation of x_ref
-		//Eigen::VectorXd x_ref_flat = Eigen::Map<const Eigen::VectorXd>(x_ref.block(0, 1, x_ref.rows(), x_ref.cols() - 1).data(), Nh_ * nx_);
-		//Eigen::VectorXd u_ref_flat = Eigen::Map<const Eigen::VectorXd>(u_ref.block(0, 0, u_ref.rows(), u_ref.cols() - 1).data(), Nh_ * nu_);
-		Eigen::VectorXd x_ref_flat = Eigen::Map<const Eigen::VectorXd>(x_ref.data(), Nh_ * nx_);
-		Eigen::VectorXd u_ref_flat = Eigen::Map<const Eigen::VectorXd>(u_ref.data(), Nh_ * nu_);
+			// x_ref_flat is a new copy of column-wise concatenation of x_ref
+			//Eigen::VectorXd x_ref_flat = Eigen::Map<const Eigen::VectorXd>(x_ref.block(0, 1, x_ref.rows(), x_ref.cols() - 1).data(), Nh_ * nx_);
+			//Eigen::VectorXd u_ref_flat = Eigen::Map<const Eigen::VectorXd>(u_ref.block(0, 0, u_ref.rows(), u_ref.cols() - 1).data(), Nh_ * nu_);
+			Eigen::VectorXd x_ref_flat = Eigen::Map<const Eigen::VectorXd>(x_ref.data(), Nh_ * nx_);
+			Eigen::VectorXd u_ref_flat = Eigen::Map<const Eigen::VectorXd>(u_ref.data(), Nh_ * nu_);
 
-		//std::cout << "u_low_full shape: " << u_low_full.rows() << " x " << u_low_full.cols() << std::endl; 
-		//std::cout << "u_ref_flat shape: " << u_ref_flat.rows() << " x " << u_ref_flat.cols() << std::endl;
+			//std::cout << "u_low_full shape: " << u_low_full.rows() << " x " << u_low_full.cols() << std::endl; 
+			//std::cout << "u_ref_flat shape: " << u_ref_flat.rows() << " x " << u_ref_flat.cols() << std::endl;
 
-		assert(u_low_full.size() == u_ref_flat.size() && "u_low_full size is not the same as u_ref_flat size!");
-		assert(x_low_full.size() == x_ref_flat.size() && "x_low_full size is not the same as x_ref_flat size!");
+			assert(u_low_full.size() == u_ref_flat.size() && "u_low_full size is not the same as u_ref_flat size!");
+			assert(x_low_full.size() == x_ref_flat.size() && "x_low_full size is not the same as x_ref_flat size!");
 
-		// set bounds for du 
-		lb_.segment(Nh_*nx_, Nh_*nu_) = u_low_full - u_ref_flat;
-		ub_.segment(Nh_*nx_, Nh_*nu_) = u_up_full - u_ref_flat;
+			// set bounds for du 
+			lb_.segment(Nh_*nx_, Nh_*nu_) = u_low_full - u_ref_flat;
+			ub_.segment(Nh_*nx_, Nh_*nu_) = u_up_full - u_ref_flat;
 
-		// set bounds for dx
-		lb_.segment(Nh_*(nx_+nu_), Nh_*nx_) = x_low_full - x_ref_flat;
-		ub_.segment(Nh_*(nx_+nu_), Nh_*nx_) = x_up_full - x_ref_flat;
+			// set bounds for dx
+			lb_.segment(Nh_*(nx_+nu_), Nh_*nx_) = x_low_full - x_ref_flat;
+			ub_.segment(Nh_*(nx_+nu_), Nh_*nx_) = x_up_full - x_ref_flat;
 
-		// set bounds for dtau constraint
-		// this does [u1, u2, u3] - [u0, u1, u2]
-		Eigen::MatrixXd diff = u_ref.block(0, 1, u_ref.rows(), u_ref.cols() - 1) - u_ref.block(0, 0, u_ref.rows(), u_ref.cols() - 1);
-		Eigen::VectorXd diff_flat = Eigen::Map<const Eigen::VectorXd>(diff.data(), diff.size());
+			// set bounds for dtau constraint
+			// this does [u1, u2, u3] - [u0, u1, u2]
+			Eigen::MatrixXd diff = u_ref.block(0, 1, u_ref.rows(), u_ref.cols() - 1) - u_ref.block(0, 0, u_ref.rows(), u_ref.cols() - 1);
+			Eigen::VectorXd diff_flat = Eigen::Map<const Eigen::VectorXd>(diff.data(), diff.size());
 
-		lb_.segment(Nh_*(nx_ + nu_ + nx_), (Nh_-1)*nu_) = Eigen::VectorXd::Constant(diff_flat.size(), -1000.*h_mpc_) - diff_flat;
-		ub_.segment(Nh_*(nx_ + nu_ + nx_), (Nh_-1)*nu_) = Eigen::VectorXd::Constant(diff_flat.size(),  1000.*h_mpc_) - diff_flat;
+			lb_.segment(Nh_*(nx_ + nu_ + nx_), (Nh_-1)*nu_) = Eigen::VectorXd::Constant(diff_flat.size(), -1000.*h_mpc_) - diff_flat;
+			ub_.segment(Nh_*(nx_ + nu_ + nx_), (Nh_-1)*nu_) = Eigen::VectorXd::Constant(diff_flat.size(),  1000.*h_mpc_) - diff_flat;
+
+		} else if (udot_bounds_on_) {
+			// set bounds for dtau constraint
+			// this does [u1, u2, u3] - [u0, u1, u2]
+			Eigen::MatrixXd diff = u_ref.block(0, 1, u_ref.rows(), u_ref.cols() - 1) - u_ref.block(0, 0, u_ref.rows(), u_ref.cols() - 1);
+			Eigen::VectorXd diff_flat = Eigen::Map<const Eigen::VectorXd>(diff.data(), diff.size());
+
+			lb_.segment(Nh_*nx_, (Nh_-1)*nu_) = Eigen::VectorXd::Constant(diff_flat.size(), -1000.*h_mpc_) - diff_flat;
+			ub_.segment(Nh_*nx_, (Nh_-1)*nu_) = Eigen::VectorXd::Constant(diff_flat.size(),  1000.*h_mpc_) - diff_flat;
+		}
 	}
 
 	//######################################################################################
@@ -514,16 +537,25 @@ namespace MPCControllers {
 
         assert (C_.cols() == Nh_ * (nx_ + nu_) && "C_ cols is not correct!");
 
-	    C_.block(Nh_*(nx_ + nu_ + nx_), 0, nu_*reps, C_.cols()) = Eigen::kroneckerProduct(I_rep, block);
+		if (decVar_bounds_on_)
+		{
+			C_.block(Nh_*(nx_ + nu_ + nx_), 0, nu_*reps, C_.cols()) = Eigen::kroneckerProduct(I_rep, block);
+		} else if (udot_bounds_on_) {
+			C_.block(Nh_*nx_, 0, nu_*reps, C_.cols()) = Eigen::kroneckerProduct(I_rep, block);
+		}
 	}
 
 
 	//######################################################################################
 	void LinearMPCProb::Scale_Q_and_R_by_ref_stddev(Eigen::MatrixXd& Q_scaled, Eigen::MatrixXd& R_scaled)
 	{
-		Eigen::RowVectorXd du_average = (processed_refTraj_.trajs.at("us").rowwise() - u_up_.transpose()).colwise().mean();
-		Eigen::RowVectorXd dq_average = (processed_refTraj_.trajs.at("q_panda").rowwise() - x_up_.transpose().head(nu_)).colwise().mean();
-		Eigen::RowVectorXd dv_average = (processed_refTraj_.trajs.at("v_panda").rowwise() - x_up_.transpose().tail(nu_)).colwise().mean();
+		//Eigen::RowVectorXd du_average = (processed_refTraj_.trajs.at("us").rowwise() - u_up_.transpose()).colwise().mean();
+		//Eigen::RowVectorXd dq_average = (processed_refTraj_.trajs.at("q_panda").rowwise() - x_up_.transpose().head(nu_)).colwise().mean();
+		//Eigen::RowVectorXd dv_average = (processed_refTraj_.trajs.at("v_panda").rowwise() - x_up_.transpose().tail(nu_)).colwise().mean();
+
+		Eigen::RowVectorXd du_average = (u_up_.transpose().replicate(processed_refTraj_.trajs.at("us").rows(), 1) - processed_refTraj_.trajs.at("us")).colwise().mean();
+		Eigen::RowVectorXd dq_average = (x_up_.transpose().head(nu_).replicate(processed_refTraj_.trajs.at("q_panda").rows(), 1) - processed_refTraj_.trajs.at("q_panda")).colwise().mean();
+		Eigen::RowVectorXd dv_average = (x_up_.transpose().tail(nu_).replicate(processed_refTraj_.trajs.at("v_panda").rows(), 1) - processed_refTraj_.trajs.at("v_panda")).colwise().mean();
 
 		std::cout << "u_ref_average: " << du_average << std::endl;
 		std::cout << "q_ref_average: " << dq_average << std::endl;
@@ -534,8 +566,8 @@ namespace MPCControllers {
 		Eigen::RowVectorXd x_average_squared_error(nx_);
 		x_average_squared_error << dq_average.array().square(), dv_average.array().square();
 
-		Q_scaled = (1. / x_average_squared_error.array()).matrix().asDiagonal();
-		R_scaled = (1. / u_average_squared_error.array()).matrix().asDiagonal();
+		Q_scaled = (Q_diag_vec_.transpose().array() * (1. / x_average_squared_error.array())).matrix().asDiagonal();
+		R_scaled = (R_diag_vec_.transpose().array() * (1. / u_average_squared_error.array())).matrix().asDiagonal();
 
 		std::cout << "Scaled Q: \n" << Q_scaled << std::endl;
 		std::cout << "Scaled R: \n" << R_scaled << std::endl;
@@ -623,11 +655,27 @@ namespace MPCControllers {
 			std::cout << "Solver success!" << std::endl;
 			dx_sol_ = result_.GetSolution(dx_vars_);
 			du_sol_ = result_.GetSolution(du_vars_);
+			std::cout << "OSQP Solve time: " 
+						   << result_.get_solver_details<OsqpSolver>().solve_time << std::endl;
 			//std::cout << "x_sol: " << x_sol.transpose() << std::endl;
 			//std::cout << "u_sol: " << u_sol.transpose() << std::endl;
 		} else {
 			std::cout << "Solver failed!" << std::endl;
 			std::cout << "Constraint violations: " << std::endl;
+
+			if (!result_.is_success()) {
+			   std::cout << "Solver failed!" << std::endl;
+
+			   // Print the solver status (e.g., "Infeasible", "Max iterations reached")
+			   std::cout << "Solver status: " 
+						   << result_.get_solver_details<OsqpSolver>().status_val << std::endl;
+
+			   // Print the result's solution status (e.g., kInfeasibleConstraints, kIterationLimit)
+			   std::cout << "Solution result: " << result_.get_solution_result() << std::endl;
+
+			   // (Optional) Print the cost at the failed solution
+			   std::cout << "Cost at solution: " << result_.get_optimal_cost() << std::endl;
+}
 
 		    auto cst_names = result_.GetInfeasibleConstraintNames(prog_);
 

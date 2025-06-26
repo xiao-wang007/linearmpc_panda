@@ -18,6 +18,7 @@
 #include <std_msgs/Time.h>
 //#include "myutils.h"
 #include <linearmpc_panda/myutils.h>
+#include <drake/common/drake_assert.h>
 
 namespace MyControllers
 {
@@ -153,6 +154,8 @@ namespace MyControllers
         std::atomic<bool> service_called_ {false};
         Eigen::VectorXd q_init_desired_ {Eigen::VectorXd::Zero(NUM_JOINTS)}; // Desired initial pose
         Eigen::VectorXd v_now_filtered_ {Eigen::VectorXd::Zero(NUM_JOINTS)}; // Filtered joint velocities
+        bool decVar_bounds_on_ {true};
+        bool udot_bounds_on_ {false}; // true if udot bounds are on, false if not
     };
 
 }

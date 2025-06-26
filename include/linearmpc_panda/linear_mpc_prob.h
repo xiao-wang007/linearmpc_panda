@@ -43,6 +43,8 @@ namespace MPCControllers{
 		LinearMPCProb(const std::string& plant_file,
 					  const std::string& integrator_name,
 					  bool exclude_gravity,
+					  bool decVar_bounds_on,
+					  bool udot_bounds_on,
 					  int N,
 					  int nx, 
 					  int nu, 
@@ -123,6 +125,8 @@ namespace MPCControllers{
 
 	private:
 		bool exclude_gravity_;
+		bool decVar_bounds_on_;
+		bool udot_bounds_on_;
 		std::string integrator_name_;
 		int nx_, nu_, Nt_, Nh_, N_;
 		double h_mpc_, h_env_, mpc_horizon_;
