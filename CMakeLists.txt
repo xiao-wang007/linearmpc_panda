@@ -28,6 +28,11 @@ else()
     message(STATUS "drake not found")
 endif()
 
+find_package(Boost REQUIRED COMPONENTS filesystem)
+find_package(Boost REQUIRED COMPONENTS serialization)
+
+
+
 set(Eigen3_FOUND True)
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 if (TARGET Eigen3::Eigen)
@@ -362,6 +367,35 @@ target_include_directories(x_init_desired_publisher PUBLIC
 
 # Install the executable
 install(TARGETS x_init_desired_publisher
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+#################################################################################################
+# Add a node to publish q_init_desired to be used for stabilization at q_init_desired
+add_executable(save_traj_to_file
+               src/save_traj_to_file.cc
+               )
+
+# Link the executable to the required libraries
+target_link_libraries(save_traj_to_file
+                      ${catkin_LIBRARIES} 
+                      Eigen3::Eigen 
+                      myutils
+                      Boost::filesystem
+                      Boost::serialization
+                      ${Boost_LIBRARIES}
+                      )
+
+# Add dependencies to ensure proper build order
+add_dependencies(save_traj_to_file ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+
+# Include the header files
+target_include_directories(save_traj_to_file PUBLIC
+        include
+        external/cnpy
+        )
+
+# Install the executable
+install(TARGETS save_traj_to_file
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #################################################################################################
