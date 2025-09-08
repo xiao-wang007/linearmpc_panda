@@ -194,7 +194,7 @@ int main(int argc, char** argv)
     // save-to-csv
     save_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_q.csv", sol_in_map["q"]);
     save_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_v.csv", sol_in_map["v"]);
-    save_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_u.csv", sol_in_map["u"]);
+    save_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_u.csv", u_noG);
     save_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_h.csv", sol_in_map["h"]);
 
     auto loaded_q = load_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_q.csv", sol_in_map["q"].rows(), sol_in_map["q"].cols());
