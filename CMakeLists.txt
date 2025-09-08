@@ -383,6 +383,7 @@ target_link_libraries(save_traj_to_file
                       Boost::filesystem
                       Boost::serialization
                       ${Boost_LIBRARIES}
+                      drake::drake
                       )
 
 # Add dependencies to ensure proper build order

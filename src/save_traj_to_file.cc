@@ -5,9 +5,6 @@
 //#include "../include/linearmpc_panda/myutils.h"
 #include <linearmpc_panda/myutils.h>
 #include <fstream>
-
-#include <Eigen/Dense>
-#include <fstream>
 // #include <iomanip>
 #include <stdexcept>
 
@@ -112,6 +109,9 @@ Eigen::MatrixXd load_csv(const std::string& filename, int rows, int cols) {
 //#################################################################################
 using namespace MyUtils;
 using Vec7 = Eigen::Matrix<double,7,1>;
+using drake::math::RigidTransform;
+using drake::math::RollPitchYaw;
+using namespace drake; // for all eigen types
 
 int main(int argc, char** argv) 
 {
@@ -149,6 +149,48 @@ int main(int argc, char** argv)
     std::cout << "sol_in_map.h.rows(): " << sol_in_map["h"].rows() << std::endl;
     std::cout << "sol_in_map.h.cols(): " << sol_in_map["h"].cols() << std::endl;
 
+    // build the plant 
+    double h_sim = 0.001;
+    std::string panda_file {"/home/rosdrake/src/drake_models/franka_description/urdf/panda_arm.urdf"};
+    RigidTransform<double> X_W_base = RigidTransform<double>(RollPitchYaw<double>(Vector3<double>(0., 0., -90.) * M_PI / 180.),
+                                                            Vector3<double>(0., -0.2, 0.));
+    auto plant_ptr = std::make_unique<MultibodyPlant<double>>(h_sim);
+    Parser parser(plant_ptr.get());
+    parser.AddModels(panda_file);
+    const auto& arm_base_frame = plant_ptr->GetFrameByName("panda_link0");
+    plant_ptr->WeldFrames(plant_ptr->world_frame(), arm_base_frame, X_W_base);
+    plant_ptr->Finalize();
+    auto context_ptr = plant_ptr->CreateDefaultContext();
+
+    // remove G from the feedforward u_ff
+    Eigen::MatrixXd u_noG(sol_in_map["u"].rows(), sol_in_map["u"].cols());
+    for (int i = 0; i < sol_in_map["u"].rows(); i++)
+    {
+        Eigen::VectorXd qi = sol_in_map["q"].row(i);
+        //compute G
+        plant_ptr->SetPositions(context_ptr.get(), qi);
+        Eigen::VectorXd ui = sol_in_map["u"].row(i);
+        Eigen::VectorXd Gi = plant_ptr->CalcGravityGeneralizedForces(*context_ptr);
+
+        if (i == 0)
+        {
+            std::cout << "Gi: " << Gi.transpose() << std::endl;
+            Eigen::VectorXd ui_noG = ui - Gi;
+        }
+        // std::cout << "Gi: " << Gi.transpose() << std::endl;
+        // std::cout << "Gi.rows(): " << Gi.rows() << std::endl;
+        // std::cout << "Gi.cols(): " << Gi.cols() << std::endl;
+        else 
+        {
+            Eigen::VectorXd ui_noG = ui + Gi;
+            u_noG.row(i) = ui_noG;
+        }
+    }
+
+    std::cout << "u_noG.rows(): " << u_noG.rows() << std::endl;
+    std::cout << "u_noG.cols(): " << u_noG.cols() << std::endl;
+    std::cout << "u_noG: \n" << u_noG << std::endl;
+
     // save-to-csv
     save_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_q.csv", sol_in_map["q"]);
     save_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_v.csv", sol_in_map["v"]);
@@ -160,9 +202,25 @@ int main(int argc, char** argv)
     std::cout << "loaded_q.cols(): " << loaded_q.cols() << std::endl;
     //std::cout << "loaded_q: " << loaded_q << std::endl;
 
+    auto loaded_v = load_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_v.csv", sol_in_map["v"].rows(), sol_in_map["v"].cols());
+    std::cout << "loaded_v.rows(): " << loaded_v.rows() << std::endl;
+    std::cout << "loaded_v.cols(): " << loaded_v.cols() << std::endl;
+    //std::cout << "loaded_v: " << loaded_v << std::endl;
+
+    auto loaded_u = load_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_u.csv", sol_in_map["u"].rows(), sol_in_map["u"].cols());
+    std::cout << "loaded_u.rows(): " << loaded_u.rows() << std::endl;
+    std::cout << "loaded_u.cols(): " << loaded_u.cols() << std::endl;
+    //std::cout << "loaded_u: " << loaded_u << std::endl;
+
+
+    //std::cout << "loaded_q: " << loaded_q << std::endl;
+    auto loaded_h = load_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_h.csv", sol_in_map["h"].rows(), sol_in_map["h"].cols());
+    std::cout << "loaded_h.rows(): " << loaded_h.rows() << std::endl;
+    std::cout << "loaded_h.cols(): " << loaded_h.cols() << std::endl;
+
     // get times mapping from eigen vector to std::vector
     std::vector<double> ts;
-    auto cumsum_h = cumulative_sum(sol_in_map["h"]);
+    auto cumsum_h = cumulative_sum(loaded_h);
     std::cout << "cumsum_h: " << cumsum_h.transpose() << std::endl;
     ts.push_back(0.0); // start from 0 second
     for (int i = 0; i < cumsum_h.rows(); i++)
@@ -172,9 +230,9 @@ int main(int argc, char** argv)
 
     // linear spline for q 
     std::vector<Vec7> qs;
-    for (int i = 0; i < sol_in_map["q"].rows(); i++)
+    for (int i = 0; i < loaded_q.rows(); i++)
     {
-        Vec7 q = sol_in_map["q"].row(i).transpose();
+        Vec7 q = loaded_q.row(i).transpose();
         qs.push_back(q);
     }
     LinearSpline<Vec7> q_spline(ts, qs);
@@ -183,9 +241,9 @@ int main(int argc, char** argv)
 
     // linear spline for v 
     std::vector<Vec7> vs;
-    for (int i = 0; i < sol_in_map["v"].rows(); i++)
+    for (int i = 0; i < loaded_v.rows(); i++)
     {
-        Vec7 v = sol_in_map["v"].row(i).transpose();
+        Vec7 v = loaded_v.row(i).transpose();
         vs.push_back(v);
     }
     LinearSpline<Vec7> v_spline(ts, vs);
@@ -194,9 +252,9 @@ int main(int argc, char** argv)
     
     // linear spline for u 
     std::vector<Vec7> us;
-    for (int i = 0; i < sol_in_map["u"].rows(); i++)
+    for (int i = 0; i < loaded_u.rows(); i++)
     {
-        Vec7 u = sol_in_map["u"].row(i).transpose();
+        Vec7 u = loaded_u.row(i).transpose();
         us.push_back(u);
     }
     LinearSpline<Vec7> u_spline(ts, us);
