@@ -34,7 +34,9 @@ int main(int argc, char** argv)
   std::cout << "Panda current pose: \n" << q_start.transpose() << std::endl;
                       
   Eigen::VectorXd q_desired(7);
-  q_desired << 0.770901, 0.396021, -0.812618, -2.17939, 0.663888, 2.34041, 0.;
+  // q_desired << 0.770901, 0.396021, -0.812618, -2.17939, 0.663888, 2.34041, 0.;
+  q_desired << 0.9207, 0.2574, -0.9527, -2.0683, 0.2799, 2.1147, 2.0;
+
 
   // breaks
   double t_end = 4.;
