@@ -117,7 +117,8 @@ int main(int argc, char** argv)
 {
 
     // std::string file_path = "/home/rosdrake/src/free_flight_test_qvu_2nd_lowSolverPrecision.npy";
-    std::string file_path = "/home/rosdrake/src/test_N60_hlow0.07/dtheta2.0/traj.npy";
+    // std::string file_path = "/home/rosdrake/src/test_N60_hlow0.07/dtheta2.0/traj.npy";
+    std::string file_path = "/home/rosdrake/src/test_N60_hlow0.04/dtheta2.0/traj.npy";
     cnpy::NpyArray arr = cnpy::npy_load(file_path);
     double* data = arr.data<double>();
 
@@ -218,10 +219,10 @@ int main(int argc, char** argv)
     std::cout << "u_noG: \n" << u_noG << std::endl;
 
     // save-to-csv
-    std::string path_q = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test1_N60_Euler_hlow0.07_q.csv";
-    std::string path_v = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test1_N60_Euler_hlow0.07_v.csv";
-    std::string path_u = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test1_N60_Euler_hlow0.07_u.csv";
-    std::string path_h = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test1_N60_Euler_hlow0.07_h.csv";
+    std::string path_q = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test2_N60_Euler_hlow0.04_dtheta2.0_q.csv";
+    std::string path_v = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test2_N60_Euler_hlow0.04_dtheta2.0_v.csv";
+    std::string path_u = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test2_N60_Euler_hlow0.04_dtheta2.0_u.csv";
+    std::string path_h = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test2_N60_Euler_hlow0.04_dtheta2.0_h.csv";
     save_csv(path_q, sol_in_map["q"]);
     save_csv(path_v, sol_in_map["v"]);
     save_csv(path_u, u_noG);
