@@ -116,7 +116,8 @@ using namespace drake; // for all eigen types
 int main(int argc, char** argv) 
 {
 
-    std::string file_path = "/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_qvu.npy";
+    // std::string file_path = "/home/rosdrake/src/free_flight_test_qvu_2nd_lowSolverPrecision.npy";
+    std::string file_path = "/home/rosdrake/src/test_N60_hlow0.07/dtheta2.0/traj.npy";
     cnpy::NpyArray arr = cnpy::npy_load(file_path);
     double* data = arr.data<double>();
 
@@ -139,15 +140,40 @@ int main(int argc, char** argv)
     //map into eigen VectorXd 
     Eigen::VectorXd sol_data = Eigen::Map<Eigen::VectorXd>(data, nRow*nCol);
     int N = 60;
-    std::vector<std::string> var_names = {"q", "v", "u", "h"};
-    std::vector<int> dims = {7, 7, 7, 1};
-    std::vector<int> times = {N, N, N, N-1};
+
+    /* for free motion */
+    // std::vector<std::string> var_names = {"q", "v", "u", "h"};
+    // std::vector<int> dims = {7, 7, 7, 1};
+    // std::vector<int> times = {N, N, N, N-1};
+    // ProcessedTrajMapToMat sol_in_map;
+    // sol_in_map = PreprocessSolutionToMat(sol_data, var_names, dims, times);
+    // std::cout << "sol_in_map.q.rows(): " << sol_in_map["q"].rows() << std::endl;
+    // std::cout << "sol_in_map.q.cols(): " << sol_in_map["q"].cols() << std::endl;
+    // std::cout << "sol_in_map.h.rows(): " << sol_in_map["h"].rows() << std::endl;
+    // std::cout << "sol_in_map.h.cols(): " << sol_in_map["h"].cols() << std::endl;
+
+    /* for contact */
+    std::vector<std::string> var_names = {"q", "v", "u", "ln", "lt", "v1", "w1", "ds", "dtheta", "h"};
+    std::vector<int> dims = {7, 7, 7, 1, 2, 2, 1, 1, 1, 1};
+    std::vector<int> times = {N, N, N, 1, 1, 1, 1, 1, 1, N-1};
     ProcessedTrajMapToMat sol_in_map;
     sol_in_map = PreprocessSolutionToMat(sol_data, var_names, dims, times);
     std::cout << "sol_in_map.q.rows(): " << sol_in_map["q"].rows() << std::endl;
     std::cout << "sol_in_map.q.cols(): " << sol_in_map["q"].cols() << std::endl;
     std::cout << "sol_in_map.h.rows(): " << sol_in_map["h"].rows() << std::endl;
     std::cout << "sol_in_map.h.cols(): " << sol_in_map["h"].cols() << std::endl;
+    std::cout << "sol_in_map.ln.rows(): " << sol_in_map["ln"].rows() << std::endl;
+    std::cout << "sol_in_map.ln.cols(): " << sol_in_map["ln"].cols() << std::endl;
+    std::cout << "sol_in_map.lt.rows(): " << sol_in_map["lt"].rows() << std::endl;
+    std::cout << "sol_in_map.lt.cols(): " << sol_in_map["lt"].cols() << std::endl;
+    std::cout << "sol_in_map.v1.rows(): " << sol_in_map["v1"].rows() << std::endl;
+    std::cout << "sol_in_map.v1.cols(): " << sol_in_map["v1"].cols() << std::endl;
+    std::cout << "sol_in_map.w1.rows(): " << sol_in_map["w1"].rows() << std::endl;
+    std::cout << "sol_in_map.w1.cols(): " << sol_in_map["w1"].cols() << std::endl;
+    std::cout << "sol_in_map.ds.rows(): " << sol_in_map["ds"].rows() << std::endl;
+    std::cout << "sol_in_map.ds.cols(): " << sol_in_map["ds"].cols() << std::endl;
+    std::cout << "sol_in_map.dtheta.rows(): " << sol_in_map["dtheta"].rows() << std::endl;
+    std::cout << "sol_in_map.dtheta.cols(): " << sol_in_map["dtheta"].cols() << std::endl;
 
     // build the plant 
     double h_sim = 0.001;
@@ -192,29 +218,32 @@ int main(int argc, char** argv)
     std::cout << "u_noG: \n" << u_noG << std::endl;
 
     // save-to-csv
-    save_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_q.csv", sol_in_map["q"]);
-    save_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_v.csv", sol_in_map["v"]);
-    save_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_u.csv", u_noG);
-    save_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_h.csv", sol_in_map["h"]);
+    std::string path_q = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test1_N60_Euler_hlow0.07_q.csv";
+    std::string path_v = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test1_N60_Euler_hlow0.07_v.csv";
+    std::string path_u = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test1_N60_Euler_hlow0.07_u.csv";
+    std::string path_h = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test1_N60_Euler_hlow0.07_h.csv";
+    save_csv(path_q, sol_in_map["q"]);
+    save_csv(path_v, sol_in_map["v"]);
+    save_csv(path_u, u_noG);
+    save_csv(path_h, sol_in_map["h"]);
 
-    auto loaded_q = load_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_q.csv", sol_in_map["q"].rows(), sol_in_map["q"].cols());
+    auto loaded_q = load_csv(path_q, sol_in_map["q"].rows(), sol_in_map["q"].cols());
     std::cout << "loaded_q.rows(): " << loaded_q.rows() << std::endl;
     std::cout << "loaded_q.cols(): " << loaded_q.cols() << std::endl;
     //std::cout << "loaded_q: " << loaded_q << std::endl;
 
-    auto loaded_v = load_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_v.csv", sol_in_map["v"].rows(), sol_in_map["v"].cols());
+    auto loaded_v = load_csv(path_v, sol_in_map["v"].rows(), sol_in_map["v"].cols());
     std::cout << "loaded_v.rows(): " << loaded_v.rows() << std::endl;
     std::cout << "loaded_v.cols(): " << loaded_v.cols() << std::endl;
     //std::cout << "loaded_v: " << loaded_v << std::endl;
 
-    auto loaded_u = load_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_u.csv", sol_in_map["u"].rows(), sol_in_map["u"].cols());
+    auto loaded_u = load_csv(path_u, sol_in_map["u"].rows(), sol_in_map["u"].cols());
     std::cout << "loaded_u.rows(): " << loaded_u.rows() << std::endl;
     std::cout << "loaded_u.cols(): " << loaded_u.cols() << std::endl;
     //std::cout << "loaded_u: " << loaded_u << std::endl;
 
-
     //std::cout << "loaded_q: " << loaded_q << std::endl;
-    auto loaded_h = load_csv("/home/rosdrake/catkin_ws/src/linearmpc_panda/free_flight_test_h.csv", sol_in_map["h"].rows(), sol_in_map["h"].cols());
+    auto loaded_h = load_csv(path_h, sol_in_map["h"].rows(), sol_in_map["h"].cols());
     std::cout << "loaded_h.rows(): " << loaded_h.rows() << std::endl;
     std::cout << "loaded_h.cols(): " << loaded_h.cols() << std::endl;
 
