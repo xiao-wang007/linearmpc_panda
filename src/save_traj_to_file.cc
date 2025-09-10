@@ -220,10 +220,10 @@ int main(int argc, char** argv)
     std::cout << "u_noG: \n" << u_noG << std::endl;
 
     // save-to-csv
-    std::string path_q = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test2_N60_Euler_hlow0.04_dtheta2.0_q.csv";
-    std::string path_v = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test2_N60_Euler_hlow0.04_dtheta2.0_v.csv";
-    std::string path_u = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test2_N60_Euler_hlow0.04_dtheta2.0_u.csv";
-    std::string path_h = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test2_N60_Euler_hlow0.04_dtheta2.0_h.csv";
+    std::string path_q = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test3_N60_Euler_hlow0.03_dtheta1.0_q.csv";
+    std::string path_v = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test3_N60_Euler_hlow0.03_dtheta1.0_v.csv";
+    std::string path_u = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test3_N60_Euler_hlow0.03_dtheta1.0_u.csv";
+    std::string path_h = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test3_N60_Euler_hlow0.03_dtheta1.0_h.csv";
     save_csv(path_q, sol_in_map["q"]);
     save_csv(path_v, sol_in_map["v"]);
     save_csv(path_u, u_noG);
