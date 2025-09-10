@@ -118,7 +118,8 @@ int main(int argc, char** argv)
 
     // std::string file_path = "/home/rosdrake/src/free_flight_test_qvu_2nd_lowSolverPrecision.npy";
     // std::string file_path = "/home/rosdrake/src/test_N60_hlow0.07/dtheta2.0/traj.npy";
-    std::string file_path = "/home/rosdrake/src/test_N60_hlow0.04/dtheta2.0/traj.npy";
+    // std::string file_path = "/home/rosdrake/src/test_N60_hlow0.04/dtheta2.0/traj.npy";
+    std::string file_path = "/home/rosdrake/src/test_N60_hlow0.03/dtheta1.0/traj.npy";
     cnpy::NpyArray arr = cnpy::npy_load(file_path);
     double* data = arr.data<double>();
 
