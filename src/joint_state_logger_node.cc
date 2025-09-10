@@ -39,7 +39,7 @@ public:
     JointStateLogger(ros::NodeHandle& nh) : nh_(nh) {
         // Get parameters
         nh_.param<std::string>("log_file", log_file_path_, "/home/rosdrake/joint_states.csv");
-        nh_.param<double>("sample_rate", sample_rate_, 100.0); // 100Hz by default
+        nh_.param<double>("sample_rate", sample_rate_, 500.0); // 500Hz by default
 
         // Subscribe to joint states topic
         joint_state_sub_ = nh_.subscribe("/franka_state_controller/joint_states", 
