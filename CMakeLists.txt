@@ -400,6 +400,30 @@ install(TARGETS save_traj_to_file
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 #################################################################################################
+# Add a node to log the joint states and measured torques to a file
+add_executable(joint_state_logger_node
+               src/joint_state_logger_node.cc
+               )
+
+# Link the executable to the required libraries
+target_link_libraries(joint_state_logger_node
+                      ${catkin_LIBRARIES} 
+                      Eigen3::Eigen 
+                      )
+
+# Add dependencies to ensure proper build order
+add_dependencies(joint_state_logger_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+
+# Include the header files
+target_include_directories(joint_state_logger_node PUBLIC
+        include
+        )
+
+# Install the executable
+install(TARGETS joint_state_logger_node
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+#################################################################################################
 # Add fake_joint_state_publisher node
 add_executable(fake_joint_state_publisher
                src/fake_joint_state_publisher.cc
