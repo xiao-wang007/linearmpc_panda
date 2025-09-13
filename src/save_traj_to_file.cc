@@ -119,7 +119,19 @@ int main(int argc, char** argv)
     // std::string file_path = "/home/rosdrake/src/free_flight_test_qvu_2nd_lowSolverPrecision.npy";
     // std::string file_path = "/home/rosdrake/src/test_N60_hlow0.07/dtheta2.0/traj.npy";
     // std::string file_path = "/home/rosdrake/src/test_N60_hlow0.04/dtheta2.0/traj.npy";
-    std::string file_path = "/home/rosdrake/src/test_N60_hlow0.03/dtheta1.0/traj.npy";
+
+    // test 1
+    // std::string file_path = "/home/rosdrake/src/exp1_euler_N60/test_N60_hlow0.03/dtheta1.0/traj.npy";
+
+    // test 2 
+    std::string file_path = "/home/rosdrake/src/N60_simpson_dtheta_2.0/traj_N60_hlow0.03_simpson.npy";
+
+    // test 3
+    // std::string file_path = "/home/rosdrake/src/N20_euler_dtheta_2.0/traj_N20_hlow0.03_simpson.npy";
+    
+    // test 4
+    // std::string file_path = "/home/rosdrake/src/N20_simpson_dtheta_2.0/traj_N20_hlow0.07_simpson.npy";
+
     cnpy::NpyArray arr = cnpy::npy_load(file_path);
     double* data = arr.data<double>();
 
@@ -220,10 +232,10 @@ int main(int argc, char** argv)
     std::cout << "u_noG: \n" << u_noG << std::endl;
 
     // save-to-csv
-    std::string path_q = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test3_N60_Euler_hlow0.03_q.csv";
-    std::string path_v = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test3_N60_Euler_hlow0.03_v.csv";
-    std::string path_u = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test3_N60_Euler_hlow0.03_u.csv";
-    std::string path_h = "/home/rosdrake/catkin_ws/src/linearmpc_panda/test3_N60_Euler_hlow0.03_h.csv";
+    std::string path_q = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/2/traj_N60_hlow0.03_simpson_q.csv";
+    std::string path_v = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/2/traj_N60_hlow0.03_simpson_v.csv";
+    std::string path_u = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/2/traj_N60_hlow0.03_simpson_u.csv";
+    std::string path_h = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/2/traj_N60_hlow0.03_simpson_h.csv";
     save_csv(path_q, sol_in_map["q"]);
     save_csv(path_v, sol_in_map["v"]);
     save_csv(path_u, u_noG);
