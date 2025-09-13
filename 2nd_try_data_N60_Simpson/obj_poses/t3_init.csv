@@ -1,0 +1,2 @@
+%time,field.header.seq,field.header.stamp,field.header.frame_id,field.pose.position.x,field.pose.position.y,field.pose.position.z,field.pose.orientation.x,field.pose.orientation.y,field.pose.orientation.z,field.pose.orientation.w
+1757804458406653881,1,1757804458406653881,mocap,-0.11835124343633652,0.07831363379955292,0.8416458368301392,-0.16997097432613373,0.6833609342575073,0.6857059001922607,0.1842152178287506

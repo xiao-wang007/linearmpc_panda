@@ -23,6 +23,8 @@ private:
     
     bool start_pose_saved_ = false;
     bool final_pose_saved_ = false;
+    geometry_msgs::PoseStamped start_pose_;
+    ros::Time last_pose_update_time_;
 
 public:
     OptitrackPoseLogger(ros::NodeHandle& nh) : nh_(nh) {
@@ -95,28 +97,57 @@ public:
         }
     }
     
-    void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
+    void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) 
+    {
         std::lock_guard<std::mutex> lock(pose_mutex_);
         latest_pose_ = msg;
+        last_pose_update_time_ = ros::Time::now();
     }
 
-    void controllerStartCallback(const std_msgs::Float64::ConstPtr& msg) {
+    // Modify the controllerStartCallback
+    void controllerStartCallback(const std_msgs::Float64::ConstPtr& msg) 
+    {
         std::lock_guard<std::mutex> lock(pose_mutex_);
         
         if (!start_pose_saved_ && latest_pose_) {
+            // Store a deep copy of the start pose
+            start_pose_ = *latest_pose_;
             savePoseToFile(latest_pose_, initial_pose_path_);
             start_pose_saved_ = true;
-            ROS_INFO("Initial pose saved to: %s", initial_pose_path_.c_str());
+            ROS_INFO("Initial pose saved to: %s at time %f", 
+                    initial_pose_path_.c_str(), 
+                    latest_pose_->header.stamp.toSec());
         }
     }
 
-    void trajectoryCompleteCallback(const std_msgs::Bool::ConstPtr& msg) {
+
+    void trajectoryCompleteCallback(const std_msgs::Bool::ConstPtr& msg) 
+    {
         std::lock_guard<std::mutex> lock(pose_mutex_);
         
         if (!final_pose_saved_ && latest_pose_) {
+            // Check if we've received a new pose since saving the start pose
+            bool is_new_pose = false;
+            if (start_pose_saved_) {
+                double time_diff = latest_pose_->header.stamp.toSec() - start_pose_.header.stamp.toSec();
+                double pos_diff = 
+                    std::abs(latest_pose_->pose.position.x - start_pose_.pose.position.x) +
+                    std::abs(latest_pose_->pose.position.y - start_pose_.pose.position.y) +
+                    std::abs(latest_pose_->pose.position.z - start_pose_.pose.position.z);
+                    
+                is_new_pose = (time_diff > 0.01) || (pos_diff > 0.001);
+            }
+            
+            if (!is_new_pose) {
+                ROS_WARN("Warning: Final pose appears to be the same as initial pose!");
+                ROS_WARN("This may indicate that no new OptiTrack data was received during execution.");
+            }
+            
             savePoseToFile(latest_pose_, final_pose_path_);
             final_pose_saved_ = true;
-            ROS_INFO("Final pose saved to: %s", final_pose_path_.c_str());
+            ROS_INFO("Final pose saved to: %s at time %f", 
+                    final_pose_path_.c_str(), 
+                    latest_pose_->header.stamp.toSec());
             
             // Since both poses are saved, we can shut down
             if (start_pose_saved_) {
@@ -124,6 +155,7 @@ public:
             }
         }
     }
+
     
     void savePoseToFile(const geometry_msgs::PoseStamped::ConstPtr& pose, 
                         const std::string& filepath) {

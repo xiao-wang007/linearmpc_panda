@@ -75,15 +75,22 @@ public:
         }
     }
 
-    void controllerStartCallback(const std_msgs::Float64::ConstPtr& msg) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (!controller_started_) {
-            controller_started_ = true;
-            controller_start_time_ = msg->data;
-            ROS_INFO("Received controller start signal. Timestamp: %.3f", controller_start_time_);
-            ROS_INFO("Starting to log joint states...");
+void controllerStartCallback(const std_msgs::Float64::ConstPtr& msg) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!controller_started_) {
+        // Check if message is too old (more than 10 seconds)
+        if (ros::Time::now().toSec() - msg->data > 10.0) {
+            ROS_WARN("Ignoring stale controller start signal (%.2f seconds old)", 
+                     ros::Time::now().toSec() - msg->data);
+            return;
         }
+        
+        controller_started_ = true;
+        controller_start_time_ = msg->data;
+        ROS_INFO("Received controller start signal. Timestamp: %.3f", controller_start_time_);
+        ROS_INFO("Starting to log joint states...");
     }
+}
 
     void trajectoryCompleteCallback(const std_msgs::Bool::ConstPtr& msg) {
         if (msg->data && !trajectory_completed_) {
@@ -201,4 +208,6 @@ int main(int argc, char** argv) {
     ros::spin();
     
     return 0;
+
+
 }
