@@ -124,13 +124,16 @@ int main(int argc, char** argv)
     // std::string file_path = "/home/rosdrake/src/exp1_euler_N60/test_N60_hlow0.03/dtheta1.0/traj.npy";
 
     // test 2 
-    std::string file_path = "/home/rosdrake/src/0_raw_traj_for_experiments/N60_simpson_dtheta_2.0/traj_N60_hlow0.03_simpson.npy";
+    // std::string file_path = "/home/rosdrake/src/0_raw_traj_for_experiments/N60_simpson_dtheta_2.0/traj_N60_hlow0.03_simpson.npy";
 
     // test 3
     // std::string file_path = "/home/rosdrake/src/N20_euler_dtheta_2.0/traj_N20_hlow0.07_euler.npy";
     
     // test 4
     // std::string file_path = "/home/rosdrake/src/0_raw_traj_for_experiments/N20_simpson_dtheta_2.0/traj_N20_hlow0.07_simpson.npy";
+
+    // test 5 effective mass with q_mid
+    std::string file_path = "/home/rosdrake/src/0_raw_traj_for_experiments/effective_mass_exp_no_G/with_q_mid/traj_N20_hlow0.07_ds0.29_simpson.npy";
 
     cnpy::NpyArray arr = cnpy::npy_load(file_path);
     double* data = arr.data<double>();
@@ -153,7 +156,12 @@ int main(int argc, char** argv)
 
     //map into eigen VectorXd 
     Eigen::VectorXd sol_data = Eigen::Map<Eigen::VectorXd>(data, nRow*nCol);
-    int N = 60;
+    int N = 20;
+    bool remove_G = false;
+    std::string path_q = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/5_effective_mass/traj_N20_hlow0.07_simpson_q.csv";
+    std::string path_v = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/5_effective_mass/traj_N20_hlow0.07_simpson_v.csv";
+    std::string path_u = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/5_effective_mass/traj_N20_hlow0.07_simpson_u.csv";
+    std::string path_h = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/5_effective_mass/traj_N20_hlow0.07_simpson_h.csv";
 
     /* for free motion */
     // std::vector<std::string> var_names = {"q", "v", "u", "h"};
@@ -203,106 +211,111 @@ int main(int argc, char** argv)
     auto context_ptr = plant_ptr->CreateDefaultContext();
 
     // remove G from the feedforward u_ff
-    Eigen::MatrixXd u_noG(sol_in_map["u"].rows(), sol_in_map["u"].cols());
-    for (int i = 0; i < sol_in_map["u"].rows(); i++)
+    if (remove_G)
     {
-        Eigen::VectorXd qi = sol_in_map["q"].row(i);
-        //compute G
-        plant_ptr->SetPositions(context_ptr.get(), qi);
-        Eigen::VectorXd ui = sol_in_map["u"].row(i);
-        Eigen::VectorXd Gi = plant_ptr->CalcGravityGeneralizedForces(*context_ptr);
+        Eigen::MatrixXd u_noG(sol_in_map["u"].rows(), sol_in_map["u"].cols());
+        for (int i = 0; i < sol_in_map["u"].rows(); i++)
+        {
+            Eigen::VectorXd qi = sol_in_map["q"].row(i);
+            //compute G
+            plant_ptr->SetPositions(context_ptr.get(), qi);
+            Eigen::VectorXd ui = sol_in_map["u"].row(i);
+            Eigen::VectorXd Gi = plant_ptr->CalcGravityGeneralizedForces(*context_ptr);
 
-        if (i == 0)
-        {
-            std::cout << "Gi: " << Gi.transpose() << std::endl;
-            Eigen::VectorXd ui_noG = ui - Gi;
+            if (i == 0)
+            {
+                std::cout << "Gi: " << Gi.transpose() << std::endl;
+                Eigen::VectorXd ui_noG = ui - Gi;
+            }
+            // std::cout << "Gi: " << Gi.transpose() << std::endl;
+            // std::cout << "Gi.rows(): " << Gi.rows() << std::endl;
+            // std::cout << "Gi.cols(): " << Gi.cols() << std::endl;
+            else 
+            {
+                Eigen::VectorXd ui_noG = ui + Gi;
+                u_noG.row(i) = ui_noG;
+            }
         }
-        // std::cout << "Gi: " << Gi.transpose() << std::endl;
-        // std::cout << "Gi.rows(): " << Gi.rows() << std::endl;
-        // std::cout << "Gi.cols(): " << Gi.cols() << std::endl;
-        else 
-        {
-            Eigen::VectorXd ui_noG = ui + Gi;
-            u_noG.row(i) = ui_noG;
-        }
+        std::cout << "u_noG.rows(): " << u_noG.rows() << std::endl;
+        std::cout << "u_noG.cols(): " << u_noG.cols() << std::endl;
+        std::cout << "u_noG: \n" << u_noG << std::endl;
+
+        save_csv(path_u, u_noG);
+    } else
+    {
+        std::cout << "checking here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+        save_csv(path_u, sol_in_map["u"]);
     }
 
-    std::cout << "u_noG.rows(): " << u_noG.rows() << std::endl;
-    std::cout << "u_noG.cols(): " << u_noG.cols() << std::endl;
-    std::cout << "u_noG: \n" << u_noG << std::endl;
 
     // save-to-csv
-    std::string path_q = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/2/traj_N60_hlow0.03_simpson_q.csv";
-    std::string path_v = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/2/traj_N60_hlow0.03_simpson_v.csv";
-    std::string path_u = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/2/traj_N60_hlow0.03_simpson_u.csv";
-    std::string path_h = "/home/rosdrake/catkin_ws/src/linearmpc_panda/real_exp/2/traj_N60_hlow0.03_simpson_h.csv";
     save_csv(path_q, sol_in_map["q"]);
     save_csv(path_v, sol_in_map["v"]);
-    save_csv(path_u, u_noG);
     save_csv(path_h, sol_in_map["h"]);
 
-    auto loaded_q = load_csv(path_q, sol_in_map["q"].rows(), sol_in_map["q"].cols());
-    std::cout << "loaded_q.rows(): " << loaded_q.rows() << std::endl;
-    std::cout << "loaded_q.cols(): " << loaded_q.cols() << std::endl;
-    //std::cout << "loaded_q: " << loaded_q << std::endl;
+    std::cout << "checking here2222!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+    // auto loaded_q = load_csv(path_q, sol_in_map["q"].rows(), sol_in_map["q"].cols());
+    // std::cout << "loaded_q.rows(): " << loaded_q.rows() << std::endl;
+    // std::cout << "loaded_q.cols(): " << loaded_q.cols() << std::endl;
+    // //std::cout << "loaded_q: " << loaded_q << std::endl;
 
-    auto loaded_v = load_csv(path_v, sol_in_map["v"].rows(), sol_in_map["v"].cols());
-    std::cout << "loaded_v.rows(): " << loaded_v.rows() << std::endl;
-    std::cout << "loaded_v.cols(): " << loaded_v.cols() << std::endl;
-    //std::cout << "loaded_v: " << loaded_v << std::endl;
+    // auto loaded_v = load_csv(path_v, sol_in_map["v"].rows(), sol_in_map["v"].cols());
+    // std::cout << "loaded_v.rows(): " << loaded_v.rows() << std::endl;
+    // std::cout << "loaded_v.cols(): " << loaded_v.cols() << std::endl;
+    // //std::cout << "loaded_v: " << loaded_v << std::endl;
 
-    auto loaded_u = load_csv(path_u, sol_in_map["u"].rows(), sol_in_map["u"].cols());
-    std::cout << "loaded_u.rows(): " << loaded_u.rows() << std::endl;
-    std::cout << "loaded_u.cols(): " << loaded_u.cols() << std::endl;
-    //std::cout << "loaded_u: " << loaded_u << std::endl;
+    // auto loaded_u = load_csv(path_u, sol_in_map["u"].rows(), sol_in_map["u"].cols());
+    // std::cout << "loaded_u.rows(): " << loaded_u.rows() << std::endl;
+    // std::cout << "loaded_u.cols(): " << loaded_u.cols() << std::endl;
+    // //std::cout << "loaded_u: " << loaded_u << std::endl;
 
-    //std::cout << "loaded_q: " << loaded_q << std::endl;
-    auto loaded_h = load_csv(path_h, sol_in_map["h"].rows(), sol_in_map["h"].cols());
-    std::cout << "loaded_h.rows(): " << loaded_h.rows() << std::endl;
-    std::cout << "loaded_h.cols(): " << loaded_h.cols() << std::endl;
+    // //std::cout << "loaded_q: " << loaded_q << std::endl;
+    // auto loaded_h = load_csv(path_h, sol_in_map["h"].rows(), sol_in_map["h"].cols());
+    // std::cout << "loaded_h.rows(): " << loaded_h.rows() << std::endl;
+    // std::cout << "loaded_h.cols(): " << loaded_h.cols() << std::endl;
 
-    // get times mapping from eigen vector to std::vector
-    std::vector<double> ts;
-    auto cumsum_h = cumulative_sum(loaded_h);
-    std::cout << "cumsum_h: " << cumsum_h.transpose() << std::endl;
-    ts.push_back(0.0); // start from 0 second
-    for (int i = 0; i < cumsum_h.rows(); i++)
-    {
-        ts.push_back(cumsum_h(i));
-    }
+    // // get times mapping from eigen vector to std::vector
+    // std::vector<double> ts;
+    // auto cumsum_h = cumulative_sum(loaded_h);
+    // std::cout << "cumsum_h: " << cumsum_h.transpose() << std::endl;
+    // ts.push_back(0.0); // start from 0 second
+    // for (int i = 0; i < cumsum_h.rows(); i++)
+    // {
+    //     ts.push_back(cumsum_h(i));
+    // }
 
-    // linear spline for q 
-    std::vector<Vec7> qs;
-    for (int i = 0; i < loaded_q.rows(); i++)
-    {
-        Vec7 q = loaded_q.row(i).transpose();
-        qs.push_back(q);
-    }
-    LinearSpline<Vec7> q_spline(ts, qs);
-    std::cout << "q_spline(0.0): " << q_spline(0.0).transpose() << std::endl;
-    std::cout << "q_spline(0.12): " << q_spline(0.12).transpose() << std::endl;
+    // // linear spline for q 
+    // std::vector<Vec7> qs;
+    // for (int i = 0; i < loaded_q.rows(); i++)
+    // {
+    //     Vec7 q = loaded_q.row(i).transpose();
+    //     qs.push_back(q);
+    // }
+    // LinearSpline<Vec7> q_spline(ts, qs);
+    // std::cout << "q_spline(0.0): " << q_spline(0.0).transpose() << std::endl;
+    // std::cout << "q_spline(0.12): " << q_spline(0.12).transpose() << std::endl;
 
-    // linear spline for v 
-    std::vector<Vec7> vs;
-    for (int i = 0; i < loaded_v.rows(); i++)
-    {
-        Vec7 v = loaded_v.row(i).transpose();
-        vs.push_back(v);
-    }
-    LinearSpline<Vec7> v_spline(ts, vs);
-    std::cout << "v_spline(0.0): " << v_spline(0.0).transpose() << std::endl;
-    std::cout << "v_spline(0.12): " << v_spline(0.12).transpose() << std::endl;
+    // // linear spline for v 
+    // std::vector<Vec7> vs;
+    // for (int i = 0; i < loaded_v.rows(); i++)
+    // {
+    //     Vec7 v = loaded_v.row(i).transpose();
+    //     vs.push_back(v);
+    // }
+    // LinearSpline<Vec7> v_spline(ts, vs);
+    // std::cout << "v_spline(0.0): " << v_spline(0.0).transpose() << std::endl;
+    // std::cout << "v_spline(0.12): " << v_spline(0.12).transpose() << std::endl;
     
-    // linear spline for u 
-    std::vector<Vec7> us;
-    for (int i = 0; i < loaded_u.rows(); i++)
-    {
-        Vec7 u = loaded_u.row(i).transpose();
-        us.push_back(u);
-    }
-    LinearSpline<Vec7> u_spline(ts, us);
-    std::cout << "u_spline(0.0): " << u_spline(0.0).transpose() << std::endl;
-    std::cout << "u_spline(0.12): " << u_spline(0.12).transpose() << std::endl;
+    // // linear spline for u 
+    // std::vector<Vec7> us;
+    // for (int i = 0; i < loaded_u.rows(); i++)
+    // {
+    //     Vec7 u = loaded_u.row(i).transpose();
+    //     us.push_back(u);
+    // }
+    // LinearSpline<Vec7> u_spline(ts, us);
+    // std::cout << "u_spline(0.0): " << u_spline(0.0).transpose() << std::endl;
+    // std::cout << "u_spline(0.12): " << u_spline(0.12).transpose() << std::endl;
 
   return 0;
 }
