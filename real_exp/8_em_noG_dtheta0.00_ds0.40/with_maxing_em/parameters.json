@@ -1,0 +1,124 @@
+{
+    "N": 40,
+    "t_impact": 20,
+    "coeff": 0.8,
+    "dtau_scalar": 1.0,
+    "impulse_cst_relaxation": 0.01,
+    "horizontal_hit_relaxation": 0.015,
+    "end_pt_relaxation": 0.03,
+    "restitution_relaxation": 0.0,
+    "h_scalar_low": 0.04,
+    "h_scalar_high": 0.1,
+    "h_impact": 0.02,
+    "mu_obj2ee": 0.9,
+    "mu_obj2obj": 0.4,
+    "mu1_linear": 0.05,
+    "mu1_angular": 0.15,
+    "radius_finger": 0.0125,
+    "obj_CoM_level": 0.05,
+    "obj_CoM_offset": 0.02,
+    "radius_cylinder": 0.03185,
+    "height": 0.101,
+    "ms": [
+        0.309
+    ],
+    "I1": 0.00015672827625000003,
+    "M_obj": [
+        [
+            0.309,
+            0.0,
+            0.0
+        ],
+        [
+            0.0,
+            0.309,
+            0.0
+        ],
+        [
+            0.0,
+            0.0,
+            0.00015672827625000003
+        ]
+    ],
+    "target_xyz_w_centre": [
+        0.5,
+        -0.75,
+        0.05
+    ],
+    "obj1_init_xyz_centre": [
+        0.1,
+        -0.75,
+        0.05
+    ],
+    "dtheta": 0.0,
+    "start_pose_panda": [
+        0.9207,
+        0.2574,
+        -0.9527,
+        -2.0683,
+        0.2799,
+        2.1147,
+        2.0
+    ],
+    "ds_d": 0.4,
+    "ds_up": 0.6000000000000001,
+    "ds_low": 0.4,
+    "dtau_scaling": 1.0,
+    "fn_low": 0.0,
+    "fn_up": 15.0,
+    "angle_at_impact": 0.5235987755982988,
+    "tilting_relaxation": 0.1,
+    "sdf_relaxation": 0.0,
+    "gravity_on": false,
+    "t_mid_pose": 19,
+    "with_q_mid": false,
+    "optimize_for_directional_inertia": true,
+    "constrain_ee_tilted": true,
+    "stay_away_before_impact": false,
+    "saving_traj_csv": true,
+    "save_stats": true,
+    "save_raw_traj": true,
+    "ee_to_level_before_impact": true,
+    "time_ratio": 0.7,
+    "pt_retraction_w": [
+        0.1,
+        -0.75,
+        0.2
+    ],
+    "q_robot_low": [
+        -2.8973,
+        -1.7628,
+        -2.8973,
+        -3.0718,
+        -2.8973,
+        -0.0175,
+        -2.8973
+    ],
+    "q_robot_up": [
+        2.8973,
+        1.7628,
+        2.8973,
+        -0.0698,
+        2.8973,
+        3.7525,
+        2.8973
+    ],
+    "v_robot_up": [
+        2.175,
+        2.175,
+        2.175,
+        2.175,
+        2.61,
+        2.61,
+        2.61
+    ],
+    "u_up": [
+        87,
+        87,
+        87,
+        87,
+        12,
+        12,
+        12
+    ]
+}
