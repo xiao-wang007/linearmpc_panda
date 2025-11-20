@@ -19,7 +19,8 @@ private:
     ros::Subscriber traj_complete_sub_;
     ros::Timer timer1_;
     ros::Timer timer2_;
-    std::string log_file_path_;
+    std::string log_file_path_joint_;
+    std::string log_file_path_wrench_;
     double sample_rate_;
     bool first_message_ = true;
     ros::Time start_time_;
@@ -43,7 +44,8 @@ private:
 public:
     JointStateLogger(ros::NodeHandle& nh) : nh_(nh) {
         // Get parameters
-        nh_.param<std::string>("log_file", log_file_path_, "/home/rosdrake/joint_states.csv");
+        nh_.param<std::string>("log_file_joint", log_file_path_joint_, "/home/rosdrake/joint_states.csv");
+        nh_.param<std::string>("log_file_wrench", log_file_path_wrench_, "/home/rosdrake/wrenches.csv");
         nh_.param<double>("sample_rate", sample_rate_, 500.0); // 500Hz by default
 
         // Subscribe to joint states topic
@@ -212,11 +214,11 @@ void controllerStartCallback(const std_msgs::Float64::ConstPtr& msg) {
             return;
         }
         
-        ROS_INFO("Saving %zu data points to %s", timestamps_joint_.size(), log_file_path_.c_str());
-        std::ofstream file(log_file_path_);
+        ROS_INFO("Saving %zu data points to %s", timestamps_joint_.size(), log_file_path_joint_.c_str());
+        std::ofstream file(log_file_path_joint_);
         
         if (!file.is_open()) {
-            ROS_ERROR("Failed to open file: %s", log_file_path_.c_str());
+            ROS_ERROR("Failed to open file: %s", log_file_path_joint_.c_str());
             return;
         }
         
@@ -244,7 +246,7 @@ void controllerStartCallback(const std_msgs::Float64::ConstPtr& msg) {
             file << std::endl;
         }
         
-        ROS_INFO("Joint states data saved successfully to %s", log_file_path_.c_str());
+        ROS_INFO("Joint states data saved successfully to %s", log_file_path_joint_.c_str());
     }
 
     void saveToFile_wrench() {
@@ -253,11 +255,11 @@ void controllerStartCallback(const std_msgs::Float64::ConstPtr& msg) {
             return;
         }
         
-        ROS_INFO("Saving %zu data points to %s", timestamps_wrench_.size(), log_file_path_.c_str());
-        std::ofstream file(log_file_path_);
+        ROS_INFO("Saving %zu data points to %s", timestamps_wrench_.size(), log_file_path_wrench_.c_str());
+        std::ofstream file(log_file_path_wrench_);
         
         if (!file.is_open()) {
-            ROS_ERROR("Failed to open file: %s", log_file_path_.c_str());
+            ROS_ERROR("Failed to open file: %s", log_file_path_wrench_.c_str());
             return;
         }
         
@@ -277,7 +279,7 @@ void controllerStartCallback(const std_msgs::Float64::ConstPtr& msg) {
             file << std::endl;
         }
         
-        ROS_INFO("Wrench data saved successfully to %s", log_file_path_.c_str());
+        ROS_INFO("Wrench data saved successfully to %s", log_file_path_wrench_.c_str());
     }
 };
 
