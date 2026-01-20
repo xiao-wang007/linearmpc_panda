@@ -8,7 +8,7 @@
 #   rosrun linearmpc_panda move_to_pose _case:=exp10
 #   rosrun linearmpc_panda move_to_pose _case:=exp11
 
-poses:
+init_poses:
   # Default pose
   default: [0.9207, 0.2574, -0.9527, -2.0683, 0.2799, 2.1147, 2.0]
   
@@ -21,6 +21,7 @@ poses:
   # For exp 11 and 11.5
   exp11: [0.6465, -0.4952, -0.0675, -2.8818, 0.6238, 2.572, 0.22666]
 
+  # additional cases 
   extra_case1:  [1.100e+00, 2.574e-01, -9.526e-01, -2.068e+00, 2.798e-01, 2.114e+00, 2.000e+00]
   extra_case2:  [6.999e-01, 2.574e-01, -9.526e-01, -2.068e+00, 2.798e-01, 2.114e+00, 2.000e+00]
   extra_case3:  [1.199e+00, 2.574e-01, -9.526e-01, -2.068e+00, 2.798e-01, 2.114e+00, 2.000e+00]
