@@ -1,7 +1,8 @@
 <launch>
   <arg name="case" default="default" />
 
-  <node name="move_to_pose" pkg="linearmpc_panda" type="move_to_pose">
+  <!-- without output="screen" ROS_INFO in the node won't show up in the console -->
+  <node name="move_to_pose" pkg="linearmpc_panda" type="move_to_pose" output="screen">
     <rosparam file="$(find linearmpc_panda)/config/init_poses.yaml" />
     <param name="case" value="$(arg case)" />
   </node>
