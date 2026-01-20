@@ -12,6 +12,29 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "move_to_pose");
   ros::NodeHandle nh;
+  ros::NodeHandle nh_priv("~");
+
+  // Get the pose case from parameter (default: "default")
+  std::string pose_case;
+  nh_priv.param<std::string>("case", pose_case, "default");
+  ROS_INFO("Loading pose for case: %s", pose_case.c_str());
+
+  // Load q_desired from parameter server based on case
+  std::string param_name = "init_poses/" + pose_case;
+  std::vector<double> q_desired_std;
+  if (!nh_priv.getParam(param_name, q_desired_std)) {
+    ROS_ERROR("Missing parameter '%s'. Available cases should be defined in init_poses.yaml", param_name.c_str());
+    ROS_ERROR("Usage: rosrun linearmpc_panda move_to_pose _case:=<case_name>");
+    return 1;
+  }
+  
+  if (q_desired_std.size() != 7) {
+    ROS_ERROR("q_desired for case '%s' must have 7 elements, got %zu", pose_case.c_str(), q_desired_std.size());
+    return 1;
+  }
+  
+  Eigen::Map<Eigen::VectorXd> q_desired(q_desired_std.data(), q_desired_std.size());
+  ROS_INFO_STREAM("Desired pose for case '" << pose_case << "': " << q_desired.transpose());
 
   // Get initial joint state
   sensor_msgs::JointState::ConstPtr joint_state_msg =
@@ -33,19 +56,19 @@ int main(int argc, char** argv)
                                               joint_state_msg->position.size());
   std::cout << "Panda current pose: \n" << q_start.transpose() << std::endl;
                       
-  Eigen::VectorXd q_desired(7);
-  // q_desired << 0.770901, 0.396021, -0.812618, -2.17939, 0.663888, 2.34041, 0.;
+  // Eigen::VectorXd q_desired(7);
+  // // q_desired << 0.770901, 0.396021, -0.812618, -2.17939, 0.663888, 2.34041, 0.;
 
-  // for N=60, Euler, the 1st real exp 
-  q_desired << 0.9207, 0.2574, -0.9527, -2.0683, 0.2799, 2.1147, 2.0;
+  // // for N=60, Euler, the 1st real exp 
+  // q_desired << 0.9207, 0.2574, -0.9527, -2.0683, 0.2799, 2.1147, 2.0;
   
-  // q_desired << 0.485 , -0.2725, -0.6025, -2.5861,  0.4472,  2.1903, -0.4899;
+  // // q_desired << 0.485 , -0.2725, -0.6025, -2.5861,  0.4472,  2.1903, -0.4899;
 
-  /* for exp 10 and 10.5 */
-  // q_desired << 0.485 , -0.2725, -0.6025, -2.5861,  0.4472,  2.1903, -0.4899;
+  // /* for exp 10 and 10.5 */
+  // // q_desired << 0.485 , -0.2725, -0.6025, -2.5861,  0.4472,  2.1903, -0.4899;
 
-  /* for exp 11 and 11.5 */
-  // q_desired << 0.6465, -0.4952, -0.0675, -2.8818,  0.6238,  2.572 ,  0.22666;
+  // /* for exp 11 and 11.5 */
+  // // q_desired << 0.6465, -0.4952, -0.0675, -2.8818,  0.6238,  2.572 ,  0.22666;
 
 
 

@@ -1,0 +1,27 @@
+# Pose configurations for move_to_pose node
+# Usage: 
+#   rosparam load $(rospack find linearmpc_panda)/config/poses.yaml /move_to_pose
+#   rosrun linearmpc_panda move_to_pose _case:=<case_name>
+#
+# Example cases:
+#   rosrun linearmpc_panda move_to_pose _case:=default
+#   rosrun linearmpc_panda move_to_pose _case:=exp10
+#   rosrun linearmpc_panda move_to_pose _case:=exp11
+
+poses:
+  # Default pose
+  default: [0.9207, 0.2574, -0.9527, -2.0683, 0.2799, 2.1147, 2.0]
+  
+  # For N=60, Euler, the 1st real exp
+  exp_n60_euler: [0.9207, 0.2574, -0.9527, -2.0683, 0.2799, 2.1147, 2.0]
+  
+  # For exp 10 and 10.5
+  exp10: [0.485, -0.2725, -0.6025, -2.5861, 0.4472, 2.1903, -0.4899]
+  
+  # For exp 11 and 11.5
+  exp11: [0.6465, -0.4952, -0.0675, -2.8818, 0.6238, 2.572, 0.22666]
+
+  extra_case1:  [1.100e+00, 2.574e-01, -9.526e-01, -2.068e+00, 2.798e-01, 2.114e+00, 2.000e+00]
+  extra_case2:  [6.999e-01, 2.574e-01, -9.526e-01, -2.068e+00, 2.798e-01, 2.114e+00, 2.000e+00]
+  extra_case3:  [1.199e+00, 2.574e-01, -9.526e-01, -2.068e+00, 2.798e-01, 2.114e+00, 2.000e+00]
+  
