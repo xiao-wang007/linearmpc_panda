@@ -70,3 +70,5 @@ echo "=========================================="
 
 # # Run with custom video settings
 # roslaunch linearmpc_panda run_experiment.launch case:=extra_case1 video_filename:=exp1.mp4 fps:=60
+ 
+
