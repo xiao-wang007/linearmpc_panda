@@ -1,0 +1,13 @@
+<launch>
+  <arg name="case" default="default" />
+  <arg name="video_filename" default="realsense_color.mp4" />
+  <arg name="fps" default="30" />
+  
+  <!-- Load pose parameters for step 1 in run_experiment.sh -->
+  <rosparam file="$(find linearmpc_panda)/config/init_poses.yaml" ns="move_to_pose" />
+  
+  <!-- Run the experiment sequence script -->
+  <node name="experiment_runner" pkg="linearmpc_panda" type="run_experiment.sh" output="screen"
+        args="$(arg case) $(arg video_filename) $(arg fps)" />
+        
+</launch>
