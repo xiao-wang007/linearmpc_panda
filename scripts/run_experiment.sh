@@ -53,31 +53,38 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     fi
 done
 
-# Step 2: Switch controller
+# Step 2: Prepare for experiment
 echo ""
-read -p "[Step 2] Press ENTER to switch controller and start experiment..."
-echo "[Step 2] Switching controller..."
+read -p "[Step 2] Press ENTER to start experiment..."
+
+# Capture initial object pose BEFORE starting
+POSE_INIT_FILE="${VIDEO_FILENAME%.mp4}_pose_init.csv"
+echo "[Step 2.1] Capturing initial object pose..."
+rostopic echo -p -n 1 /mocap/rigid_bodies/Tomato_soup/pose > $POSE_INIT_FILE
+echo "[Step 2.1] Initial pose saved to $POSE_INIT_FILE"
+
+# Start video recording BEFORE switching controller
+echo "[Step 2.2] Starting video recording..."
+# & means to run the line in the background, > /dev/null throws output away, 2>&1 throws errors away
+rosrun image_view video_recorder image:=/camera/color/image_raw _filename:=$VIDEO_FILENAME _fps:=$FPS > /dev/null 2>&1 &
+VIDEO_PID=$!
+echo "[Step 2.2] Video recording started (PID: $VIDEO_PID)"
+sleep 1  # Give video recorder time to initialize
+
+# NOW switch controller (trajectory starts)
+echo "[Step 2.3] Switching controller..."
 rosservice call /controller_manager/switch_controller "{start_controllers: ['panda_torque_pd_controller_simpson'], stop_controllers: ['position_joint_trajectory_controller'], strictness: 2}"
 
 if [ $? -ne 0 ]; then # check if the last command ($?) is successful (-ne 0, not equal to 0)
     echo "[ERROR] Failed to switch controller"
+    kill -SIGINT $VIDEO_PID 2>/dev/null
     exit 1
 fi
 
-echo "[Step 2] Controller switched successfully"
-
-# Step 3: Start video recording in background
-echo "[Step 3] Starting video recording..."
-# Note: video_recorder records at source resolution. To resize, either:
-#   - Use ffmpeg after: ffmpeg -i input.mp4 -vf scale=${WIDTH}:${HEIGHT} output.mp4
-#   - Or launch a resize node before this line
-rosrun image_view video_recorder image:=/camera/color/image_raw _filename:=$VIDEO_FILENAME _fps:=$FPS &
-VIDEO_PID=$!
-
-echo "[Step 3] Video recording started (PID: $VIDEO_PID)"
+echo "[Step 2.3] Controller switched - experiment running!"
 
 # Wait for trajectory completion signal
-echo "[Step 4] Waiting for trajectory completion..."
+echo "[Step 3] Waiting for trajectory completion..."
 while true; do
     RESULT=$(rostopic echo -n 1 /trajectory_completion)
     if echo "$RESULT" | grep -q "data: True"; then
@@ -85,15 +92,21 @@ while true; do
     fi
     sleep 0.5
 done
-echo "[Step 4] Trajectory completed!"
+echo "[Step 3] Trajectory completed!"
+
+# Capture final object pose
+POSE_END_FILE="${VIDEO_FILENAME%.mp4}_pose_end.csv"
+echo "[Step 3.1] Capturing final object pose..."
+rostopic echo -p -n 1 /mocap/rigid_bodies/Tomato_soup/pose > $POSE_END_FILE
+echo "[Step 3.1] Final pose saved to $POSE_END_FILE"
 
 # Stop video recording
-echo "[Step 5] Stopping video recording..."
+echo "[Step 3.2] Stopping video recording..."
 kill -SIGINT $VIDEO_PID 2>/dev/null
 sleep 2  # Give video_recorder time to finalize
 
 # Switch back to position controller
-echo "[Step 6] Switching back to position controller..."
+echo "[Step 4] Switching back to position controller..."
 rosservice call /controller_manager/switch_controller "{start_controllers: ['position_joint_trajectory_controller'], stop_controllers: ['panda_torque_pd_controller_simpson'], strictness: 2}"
 
 echo "=========================================="
