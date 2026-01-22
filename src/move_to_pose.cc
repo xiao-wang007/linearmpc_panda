@@ -19,10 +19,10 @@ int main(int argc, char** argv)
   nh_priv.param<std::string>("case", pose_case, "default");
   ROS_INFO("Loading pose for case: %s", pose_case.c_str());
 
-  // Load q_desired from parameter server based on case
-  std::string param_name = "init_poses/" + pose_case;
+  // Load q_desired from parameter server based on case (use global namespace that starts with /)
+  std::string param_name = "/init_poses/" + pose_case;
   std::vector<double> q_desired_std;
-  if (!nh_priv.getParam(param_name, q_desired_std)) {
+  if (!nh.getParam(param_name, q_desired_std)) {
     ROS_ERROR("Missing parameter '%s'. Available cases should be defined in init_poses.yaml", param_name.c_str());
     ROS_ERROR("Usage: rosrun linearmpc_panda move_to_pose _case:=<case_name>");
     return 1;
